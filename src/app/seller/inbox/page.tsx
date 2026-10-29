@@ -1,0 +1,153 @@
+import { and, desc, eq, inArray } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import type { AgentAction } from "@/lib/db/schema";
+import { usd } from "@/lib/money";
+import { currentSeller, timeAgo } from "@/lib/seller";
+import { ApprovalButtons, ShipForm } from "./forms";
+
+// Seller inbox: refunds waiting for approval, paid orders to ship, and everything the agent did.
+export const dynamic = "force-dynamic";
+
+const STATUS_STYLE: Record<AgentAction["status"], { label: string; className: string }> = {
+  auto: { label: "Done by agent", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
+  pending_approval: { label: "Needs you", className: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300" },
+  approved: { label: "Approved", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
+  rejected: { label: "Rejected", className: "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300" },
+  blocked: { label: "Blocked by rule", className: "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300" },
+  failed: { label: "Failed", className: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300" },
+};
+
+const TOOL_LABEL: Record<string, string> = {
+  refund_order: "Refund",
+  add_tracking: "Shipment tracking",
+  create_shipment_tracking: "Shipment tracking",
+  create_refund: "Refund",
+  get_dispute: "Dispute review",
+};
+
+function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+  return (
+    <section className="mt-10">
+      <h2 className="text-lg font-semibold">
+        {title}
+        {count != null && <span className="ml-2 text-sm font-normal opacity-60">{count}</span>}
+      </h2>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="rounded-lg border border-dashed border-stone-300 p-4 text-sm opacity-70 dark:border-stone-700">{children}</p>;
+}
+
+export default async function Inbox() {
+  const seller = await currentSeller();
+
+  const [pending, toShip, activity, products] = await Promise.all([
+    db.query.agentActions.findMany({
+      where: and(eq(schema.agentActions.sellerId, seller.id), eq(schema.agentActions.status, "pending_approval")),
+      orderBy: desc(schema.agentActions.createdAt),
+    }),
+    db.query.orders.findMany({
+      where: and(eq(schema.orders.sellerId, seller.id), eq(schema.orders.status, "paid"), eq(schema.orders.demo, false)),
+      orderBy: desc(schema.orders.createdAt),
+    }),
+    db.query.agentActions.findMany({
+      where: eq(schema.agentActions.sellerId, seller.id),
+      orderBy: desc(schema.agentActions.createdAt),
+      limit: 30,
+    }),
+    db.query.products.findMany({ where: eq(schema.products.sellerId, seller.id) }),
+  ]);
+
+  const orderIds = [...new Set([...pending, ...activity].map((a) => a.orderId).filter((id): id is string => !!id))];
+  const orders = orderIds.length
+    ? await db.query.orders.findMany({ where: inArray(schema.orders.id, orderIds) })
+    : [];
+  const orderById = new Map([...orders, ...toShip].map((o) => [o.id, o]));
+  const titleById = new Map(products.map((p) => [p.id, p.title]));
+
+  const describeOrder = (orderId: string | null) => {
+    const o = orderId ? orderById.get(orderId) : undefined;
+    if (!o) return "Unknown order";
+    const who = o.channel === "ai_agent" ? `via ${o.agentName ?? "AI assistant"}` : "via storefront";
+    return `${o.productId ? titleById.get(o.productId) : "Order"}${o.quantity > 1 ? ` ×${o.quantity}` : ""} · ${usd(o.amountCents)} · ${o.buyerName ?? "buyer"} ${who}`;
+  };
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <p className="text-sm opacity-60">{seller.name}</p>
+      <h1 className="text-3xl font-semibold tracking-tight">Inbox</h1>
+      <p className="mt-1 text-sm opacity-70">
+        Your agent refunds up to {usd(seller.refundAutoLimitCents)} on its own. Anything larger waits here for you.
+      </p>
+
+      <Section title="Needs your approval" count={pending.length}>
+        {pending.length === 0 ? (
+          <Empty>Nothing waiting. Your agent is handling everything within your rules.</Empty>
+        ) : (
+          <ul className="space-y-3">
+            {pending.map((a) => {
+              const amount = usd(Number((a.input as { amountCents?: number } | null)?.amountCents ?? 0));
+              return (
+                <li key={a.id} className="rounded-xl border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+                  <p className="font-medium">
+                    {TOOL_LABEL[a.tool] ?? a.tool} of {amount}
+                  </p>
+                  <p className="mt-0.5 text-sm opacity-70">{describeOrder(a.orderId)}</p>
+                  <p className="mt-2 text-sm">
+                    <span className="opacity-60">Agent: </span>
+                    {a.reason}
+                  </p>
+                  <div className="mt-3">
+                    <ApprovalButtons actionId={a.id} amount={amount} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Section>
+
+      <Section title="Ready to ship" count={toShip.length}>
+        {toShip.length === 0 ? (
+          <Empty>No paid orders waiting to ship.</Empty>
+        ) : (
+          <ul className="space-y-3">
+            {toShip.map((o) => (
+              <li key={o.id} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
+                <p className="font-medium">{describeOrder(o.id)}</p>
+                <p className="mb-3 text-sm opacity-60">Paid {timeAgo(o.createdAt)}</p>
+                <ShipForm orderId={o.id} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      <Section title="Agent activity">
+        {activity.length === 0 ? (
+          <Empty>No agent activity yet.</Empty>
+        ) : (
+          <ol className="divide-y divide-stone-200 dark:divide-stone-800">
+            {activity.map((a) => {
+              const style = STATUS_STYLE[a.status];
+              return (
+                <li key={a.id} className="py-3">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${style.className}`}>{style.label}</span>
+                    <span className="font-medium">{TOOL_LABEL[a.tool] ?? a.tool}</span>
+                    <span className="opacity-60">{timeAgo(a.createdAt)}</span>
+                  </div>
+                  <p className="mt-1 text-sm opacity-70">{describeOrder(a.orderId)}</p>
+                  {a.reason && <p className="mt-1 text-sm">{a.reason}</p>}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </Section>
+    </main>
+  );
+}
