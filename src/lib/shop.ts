@@ -184,14 +184,19 @@ export async function completeCheckout(paypalOrderId: string) {
 }
 
 /** Order status for a buyer or their AI, by our order id or the PayPal order id. No buyer PII. */
-export async function orderStatus(seller: Seller, id: string) {
+/** Look up one of this shop's orders by our order id or the PayPal order id. */
+export async function findOrder(seller: Seller, id: string) {
   const isUuid = /^[0-9a-f-]{36}$/i.test(id);
-  const order = await db.query.orders.findFirst({
+  return db.query.orders.findFirst({
     where: and(
       eq(schema.orders.sellerId, seller.id),
       isUuid ? eq(schema.orders.id, id) : eq(schema.orders.paypalOrderId, id),
     ),
   });
+}
+
+export async function orderStatus(seller: Seller, id: string) {
+  const order = await findOrder(seller, id);
   if (!order) return undefined;
   const product = order.productId
     ? await db.query.products.findFirst({ where: eq(schema.products.id, order.productId) })
@@ -202,6 +207,7 @@ export async function orderStatus(seller: Seller, id: string) {
     product: product?.title,
     quantity: order.quantity,
     total: usd(order.amountCents),
+    refunded: order.refundedCents ? usd(order.refundedCents) : undefined,
     status: order.status,
     carrier: order.carrier,
     trackingNumber: order.trackingNumber,

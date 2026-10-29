@@ -1,8 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { Seller } from "../db/schema";
+import { requestRefund } from "../agent/actions";
 import {
   askSeller,
+  findOrder,
   getProduct,
   MAX_QUANTITY,
   orderStatus,
@@ -53,7 +55,8 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
         `${seller.name}: ${seller.tagline ?? "an independent shop"}. ` +
         "Use search_products to browse, ask_seller for questions the listing doesn't answer, " +
         "and create_checkout to buy. Checkout returns a PayPal link: always show it to the user, " +
-        "who must approve the payment themselves. Never claim an order is paid until get_order_status says so.",
+        "who must approve the payment themselves. Never claim an order is paid until get_order_status says so. " +
+        "If something went wrong with an order, use request_refund with the email the buyer paid with.",
     },
   );
 
@@ -160,6 +163,44 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
       run(async () => {
         const status = await orderStatus(seller, order_id);
         return status ? ok(status) : fail(`No order ${order_id} at ${seller.name}.`);
+      }),
+  );
+
+  server.registerTool(
+    "request_refund",
+    {
+      title: "Request a refund",
+      description:
+        "Ask the seller for a refund on a paid order, on the buyer's behalf. Requires the email the buyer paid with. " +
+        `${seller.name}'s rules decide the outcome: small refunds are processed right away, larger ones wait for the seller to approve. ` +
+        "Report the outcome to the user exactly as returned; don't promise money that hasn't been refunded.",
+      inputSchema: {
+        order_id: z.string().describe("orderId from create_checkout (or the PayPal order id)"),
+        buyer_email: z.string().email().describe("The email address the buyer paid with on PayPal"),
+        reason: z.string().min(5).max(500).describe("What went wrong, in the buyer's words"),
+        amount_usd: z.number().positive().optional().describe("Partial refund amount; omit for a full refund"),
+      },
+    },
+    ({ order_id, buyer_email, reason, amount_usd }) =>
+      run(async () => {
+        const order = await findOrder(seller, order_id);
+        // Same message whether the order is missing or the email doesn't match, so ids can't be probed.
+        if (!order || order.buyerEmail?.toLowerCase() !== buyer_email.trim().toLowerCase()) {
+          return fail("No paid order matches that order id and email.");
+        }
+        const result = await requestRefund(order.id, `Buyer's assistant: "${reason.trim()}"`, {
+          amountCents: amount_usd != null ? Math.round(amount_usd * 100) : undefined,
+          note: `Refund from ${seller.name}`,
+        });
+        const outcome = {
+          auto: "refunded",
+          pending_approval: "waiting_for_seller",
+          blocked: "not_eligible",
+          failed: "error",
+          approved: "refunded",
+          rejected: "declined",
+        }[result.action.status];
+        return ok({ outcome, message: result.message, orderId: order.id });
       }),
   );
 

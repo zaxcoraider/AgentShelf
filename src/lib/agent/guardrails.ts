@@ -31,6 +31,7 @@ export function decideRefund(input: {
   if (order.status === "disputed") {
     return { kind: "blocked", why: "The order is in a PayPal dispute; resolve it through the dispute instead." };
   }
+  if (order.status === "refunded") return { kind: "blocked", why: "The order has already been fully refunded." };
   if (!REFUNDABLE_STATUSES.includes(order.status) || !order.captureId) {
     return { kind: "blocked", why: `The order is ${order.status}, so there is no captured payment to refund.` };
   }
