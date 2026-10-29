@@ -30,6 +30,7 @@ export const actionStatus = pgEnum("action_status", [
   "pending_approval", // waiting for the seller
   "approved", // seller approved, then executed
   "rejected", // seller said no
+  "blocked", // a guardrail refused it outright
   "failed", // PayPal or the model returned an error
 ]);
 

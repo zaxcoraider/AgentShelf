@@ -5,6 +5,7 @@ import {
   OrdersController,
   PaymentsController,
   PaypalExperienceUserAction,
+  ShipmentCarrier,
 } from "@paypal/paypal-server-sdk";
 
 /** PayPal REST client (sandbox only). The SDK handles OAuth and token refresh. */
@@ -82,4 +83,50 @@ export async function captureOrder(orderId: string) {
     payerEmail: result.payer?.emailAddress,
     payerName: [name?.givenName, name?.surname].filter(Boolean).join(" ") || undefined,
   };
+}
+
+const money = (cents: number) => ({ currencyCode: "USD", value: (cents / 100).toFixed(2) });
+
+/**
+ * Refund a captured payment (full when `amountCents` is omitted).
+ * `requestId` makes the call idempotent: PayPal returns the same refund if it is retried.
+ */
+export async function refundCapture(opts: {
+  captureId: string;
+  amountCents?: number;
+  note?: string;
+  requestId: string;
+}) {
+  const { result } = await payments().refundCapturedPayment({
+    captureId: opts.captureId,
+    paypalRequestId: opts.requestId,
+    prefer: "return=representation",
+    body: {
+      amount: opts.amountCents != null ? money(opts.amountCents) : undefined,
+      noteToPayer: opts.note?.slice(0, 255),
+    },
+  });
+  return { refundId: result.id, status: result.status };
+}
+
+export const CARRIERS = { USPS: ShipmentCarrier.Usps, UPS: ShipmentCarrier.Ups, FEDEX: ShipmentCarrier.Fedex, DHL: ShipmentCarrier.Dhl };
+export type Carrier = keyof typeof CARRIERS;
+
+/** Attach shipment tracking to a PayPal order so the buyer sees it in PayPal. */
+export async function addOrderTracking(opts: {
+  paypalOrderId: string;
+  captureId: string;
+  carrier: Carrier;
+  trackingNumber: string;
+}) {
+  const { result } = await orders().createOrderTracking({
+    id: opts.paypalOrderId,
+    body: {
+      captureId: opts.captureId,
+      carrier: CARRIERS[opts.carrier],
+      trackingNumber: opts.trackingNumber,
+      notifyPayer: true,
+    },
+  });
+  return { status: result.status };
 }

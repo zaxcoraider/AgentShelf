@@ -3,7 +3,10 @@ import { and, eq, sql } from "drizzle-orm";
 import { aiConfigured, withFallback } from "./ai";
 import { db, schema } from "./db";
 import type { Product, Seller } from "./db/schema";
+import { usd } from "./money";
 import { captureOrder, createOrder, type CheckoutChannel } from "./paypal/client";
+
+export { usd };
 
 /**
  * Shop logic shared by the MCP server (AI buyers) and the storefront (human buyers):
@@ -15,7 +18,6 @@ export const MAX_QUANTITY = 5;
 
 // Render sets RENDER_EXTERNAL_URL, so APP_URL only needs setting for a custom domain.
 const appUrl = () => process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:3000";
-export const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 export class ShopError extends Error {}
 
