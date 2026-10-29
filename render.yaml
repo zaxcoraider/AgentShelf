@@ -1,0 +1,54 @@
+# Render Blueprint: creates the AgentShelf web app and its Postgres database.
+# Render dashboard → New → Blueprint → pick this repo. Secrets marked `sync: false`
+# are asked for once in the dashboard and never stored in the repo.
+
+services:
+  - type: web
+    name: agentshelf
+    runtime: node
+    plan: starter # paid: no sleeping, so MCP clients don't time out on a cold start
+    region: oregon
+    buildCommand: npm ci && npm run build
+    # Runs before each deploy goes live. The seed only inserts the demo shop if it's missing.
+    preDeployCommand: npm run db:setup
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agentshelf-db
+          property: connectionString
+      - key: PAYPAL_ENVIRONMENT
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL_AGENT
+        sync: false
+      - key: AI_MODEL_VISION
+        sync: false
+      - key: AI_MODEL_FAST
+        sync: false
+      - key: AI_FALLBACK_BASE_URL
+        sync: false
+      - key: AI_FALLBACK_API_KEY
+        sync: false
+      - key: AI_FALLBACK_MODEL
+        sync: false
+
+databases:
+  - name: agentshelf-db
+    databaseName: agentshelf
+    plan: basic-256mb # paid: free Render Postgres expires after 30 days, mid-judging
+    region: oregon
+    postgresMajorVersion: "17"

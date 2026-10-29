@@ -13,7 +13,8 @@ import { captureOrder, createOrder, type CheckoutChannel } from "./paypal/client
 export const SHIPPING_CENTS = 595;
 export const MAX_QUANTITY = 5;
 
-const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
+// Render sets RENDER_EXTERNAL_URL, so APP_URL only needs setting for a custom domain.
+const appUrl = () => process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:3000";
 export const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 export class ShopError extends Error {}
