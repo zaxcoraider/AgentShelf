@@ -14,11 +14,13 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/db-migrate.mts",
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed.mts",
-    "db:setup": "npm run db:migrate && npm run db:seed"
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "smoke:mcp": "tsx --env-file-if-exists=.env scripts/smoke-mcp.mts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.80",
     "@electric-sql/pglite": "^0.5.13",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@paypal/agent-toolkit": "^1.11.0",
     "@paypal/paypal-server-sdk": "^2.5.0",
     "ai": "^7.0.155",

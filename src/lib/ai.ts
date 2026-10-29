@@ -38,6 +38,11 @@ const fallback = () =>
       })
     : null;
 
+/** True when a model for this task is configured, so features can degrade gracefully without AI keys. */
+export function aiConfigured(task: AiTask): boolean {
+  return Boolean(process.env.AI_BASE_URL && process.env.AI_API_KEY && process.env[TASK_ENV[task]]);
+}
+
 export function getModel(task: AiTask): LanguageModel {
   return primary()(required(TASK_ENV[task]));
 }

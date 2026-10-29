@@ -75,5 +75,11 @@ export async function createOrder(opts: {
 export async function captureOrder(orderId: string) {
   const { result } = await orders().captureOrder({ id: orderId, prefer: "return=representation" });
   const capture = result.purchaseUnits?.[0]?.payments?.captures?.[0];
-  return { status: result.status, captureId: capture?.id, payerEmail: result.payer?.emailAddress };
+  const name = result.payer?.name;
+  return {
+    status: result.status,
+    captureId: capture?.id,
+    payerEmail: result.payer?.emailAddress,
+    payerName: [name?.givenName, name?.surname].filter(Boolean).join(" ") || undefined,
+  };
 }
