@@ -24,6 +24,7 @@
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@paypal/agent-toolkit": "^1.11.0",
     "@paypal/paypal-server-sdk": "^2.5.0",
+    "@paypal/react-paypal-js": "^10.6.1",
     "ai": "^7.0.155",
     "drizzle-orm": "^0.45.4",
     "next": "15.5.28",
