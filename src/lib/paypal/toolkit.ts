@@ -73,3 +73,29 @@ export function paypalTools(preset: keyof typeof PRESETS = "seller"): ToolSet {
     ]),
   );
 }
+
+/**
+ * Create a product in the seller's PayPal catalog with the toolkit's own create_product tool,
+ * called directly (no model in the loop) so a published listing always lands in PayPal.
+ */
+export async function createCatalogProduct(input: {
+  name: string;
+  description: string;
+  imageUrl?: string;
+  homeUrl?: string;
+}): Promise<string> {
+  const raw = getToolkit("seller").getTools() as unknown as Record<string, V4Tool>;
+  const result = await raw.create_product.execute(
+    {
+      name: input.name.slice(0, 127),
+      type: "PHYSICAL",
+      description: input.description.slice(0, 256),
+      image_url: input.imageUrl,
+      home_url: input.homeUrl,
+    },
+    {},
+  );
+  const body = (typeof result === "string" ? JSON.parse(result) : result) as { id?: string; message?: string };
+  if (!body?.id) throw new Error(`PayPal didn't create the product: ${JSON.stringify(body).slice(0, 300)}`);
+  return body.id;
+}

@@ -3,7 +3,7 @@ import type { LanguageModel } from "ai";
 
 /**
  * Every AI call in AgentShelf goes through this module.
- * Primary provider: DGrid AI gateway (OpenAI-compatible).
+ * Primary provider: any OpenAI-compatible gateway (Nebius Token Factory today).
  * Fallback: any other OpenAI-compatible endpoint (e.g. Anthropic's).
  * Swapping gateway or models is a config change, never a code change.
  */
@@ -24,9 +24,11 @@ function required(name: string): string {
 
 const primary = () =>
   createOpenAICompatible({
-    name: "dgrid",
+    name: "primary",
     baseURL: required("AI_BASE_URL"),
     apiKey: required("AI_API_KEY"),
+    // Send our zod schemas as strict JSON schema; plain JSON mode returned the wrong keys.
+    supportsStructuredOutputs: true,
   });
 
 const fallback = () =>

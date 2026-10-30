@@ -1,5 +1,6 @@
 import {
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -71,6 +72,18 @@ export const products = pgTable(
   },
   (t) => [index("products_seller_idx").on(t.sellerId)],
 );
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+/** Product photos, stored in Postgres so they survive redeploys (Render's disk doesn't). */
+export const productImages = pgTable("product_images", {
+  productId: uuid("product_id")
+    .primaryKey()
+    .references(() => products.id, { onDelete: "cascade" }),
+  mediaType: text("media_type").notNull(),
+  data: bytea("data").notNull(),
+  ...timestamps,
+});
 
 export const orders = pgTable(
   "orders",

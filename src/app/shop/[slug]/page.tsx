@@ -35,12 +35,17 @@ export default async function Storefront({ params }: { params: Promise<{ slug: s
         <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
             <li key={p.id} className="flex flex-col rounded-xl border border-stone-200 p-5 dark:border-stone-800">
-              <div
-                aria-hidden
-                className="flex aspect-[4/3] items-center justify-center rounded-lg bg-gradient-to-br from-amber-100 to-stone-200 text-4xl dark:from-amber-950 dark:to-stone-900"
-              >
-                🕯️
-              </div>
+              {p.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- photos are served from our own DB route
+                <img src={p.imageUrl} alt={p.title} className="aspect-[4/3] w-full rounded-lg object-cover" />
+              ) : (
+                <div
+                  aria-hidden
+                  className="flex aspect-[4/3] items-center justify-center rounded-lg bg-gradient-to-br from-amber-100 to-stone-200 text-4xl dark:from-amber-950 dark:to-stone-900"
+                >
+                  🕯️
+                </div>
+              )}
               <h2 className="mt-4 font-medium">{p.title}</h2>
               <p className="mt-1 text-sm opacity-70">{p.attributes.scent}</p>
               <p className="mt-2 text-lg">{usd(p.priceCents)}</p>

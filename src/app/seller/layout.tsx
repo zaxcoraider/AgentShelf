@@ -4,6 +4,7 @@ import { DEMO_SELLER_SLUG } from "@/lib/seller";
 // Shared nav for the seller's pages.
 const LINKS = [
   { href: "/seller/inbox", label: "Inbox" },
+  { href: "/seller/listings", label: "Add products" },
   { href: "/seller/connect", label: "Connect your AI" },
   { href: `/shop/${DEMO_SELLER_SLUG}`, label: "Storefront" },
 ];

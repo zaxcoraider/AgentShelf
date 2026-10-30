@@ -34,6 +34,7 @@ export function publicProduct(p: Product) {
     price: usd(p.priceCents),
     priceCents: p.priceCents,
     attributes: p.attributes,
+    imageUrl: p.imageUrl ? new URL(p.imageUrl, appUrl()).href : undefined,
     inStock: p.stock > 0,
     stock: p.stock,
   };
