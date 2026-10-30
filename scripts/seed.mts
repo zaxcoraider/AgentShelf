@@ -84,8 +84,10 @@ const orderRows = Array.from({ length: 42 }, (_, i) => {
   const isAi = rand() < 0.25 + 0.45 * (i / 42);
   const buyerName = pick(buyers);
   const roll = rand();
+  // Two fixed disputes so the dashboard always has deadlines to count down.
   const status =
-    ageDays < 2 ? (roll < 0.6 ? "paid" : "shipped")
+    i === 14 || i === 29 ? "disputed"
+    : ageDays < 2 ? (roll < 0.6 ? "paid" : "shipped")
     : roll < 0.08 ? "refunded"
     : roll < 0.11 ? "disputed"
     : "shipped";
@@ -158,8 +160,22 @@ const actions = orders.flatMap((o) => {
 
 if (actions.length) await db.insert(schema.agentActions).values(actions);
 
+// Open disputes with response deadlines a few days out, for the "disputes due soon" countdown.
+const disputeRows = orders
+  .filter((o) => o.status === "disputed")
+  .map((o, i) => ({
+    orderId: o.id,
+    paypalDisputeId: `PP-D-DEMO-${i + 1}`,
+    reason: "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+    status: "WAITING_FOR_SELLER_RESPONSE",
+    amountCents: o.amountCents,
+    responseDueAt: new Date(now + (2 + i * 4) * DAY),
+    aiRecommendation: "Tracking shows it was delivered. Respond with the tracking number as evidence.",
+  }));
+if (disputeRows.length) await db.insert(schema.disputes).values(disputeRows);
+
 console.log(
   `Seeded "${seller.name}": ${products.length} products, ${orders.length} orders ` +
-    `(${orders.filter((o) => o.channel === "ai_agent").length} from AI shoppers), ${actions.length} agent actions.`,
+    `(${orders.filter((o) => o.channel === "ai_agent").length} from AI shoppers), ${actions.length} agent actions, ${disputeRows.length} open disputes.`,
 );
 process.exit(0);

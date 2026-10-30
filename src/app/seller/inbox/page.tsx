@@ -1,4 +1,5 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import Link from "next/link";
 import { db, schema } from "@/lib/db";
 import type { AgentAction } from "@/lib/db/schema";
 import { usd } from "@/lib/money";
@@ -25,6 +26,31 @@ const TOOL_LABEL: Record<string, string> = {
   get_dispute: "Dispute review",
 };
 
+/** Activity log filters: which tools each one shows. */
+const FILTERS = {
+  all: { label: "All", tools: null },
+  refunds: { label: "Refunds", tools: ["refund_order", "create_refund"] },
+  tracking: { label: "Tracking", tools: ["add_tracking", "create_shipment_tracking"] },
+  disputes: { label: "Disputes", tools: ["get_dispute"] },
+} as const;
+type Filter = keyof typeof FILTERS;
+
+const DISPUTE_REASON: Record<string, string> = {
+  MERCHANDISE_OR_SERVICE_NOT_RECEIVED: "Buyer says it never arrived",
+  MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED: "Buyer says it isn't as described",
+  UNAUTHORISED: "Buyer says they didn't make this payment",
+  DUPLICATE_TRANSACTION: "Buyer says they were charged twice",
+};
+
+/** "Respond in 3 days" countdown; red once two days or less remain. */
+function dueLabel(due: Date | null, now = Date.now()) {
+  if (!due) return { text: "No deadline from PayPal yet", urgent: false };
+  const days = Math.ceil((due.getTime() - now) / 86_400_000);
+  if (days < 0) return { text: "Response overdue", urgent: true };
+  if (days === 0) return { text: "Respond today", urgent: true };
+  return { text: `Respond within ${days} day${days === 1 ? "" : "s"}`, urgent: days <= 2 };
+}
+
 function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
   return (
     <section className="mt-10">
@@ -41,10 +67,13 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-lg border border-dashed border-stone-300 p-4 text-sm opacity-70 dark:border-stone-700">{children}</p>;
 }
 
-export default async function Inbox() {
+export default async function Inbox({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
   const seller = await currentSeller();
+  const { show } = await searchParams;
+  const filter: Filter = show && show in FILTERS ? (show as Filter) : "all";
+  const filterTools = FILTERS[filter].tools;
 
-  const [pending, toShip, activity, products] = await Promise.all([
+  const [pending, toShip, activity, products, openDisputes] = await Promise.all([
     db.query.agentActions.findMany({
       where: and(eq(schema.agentActions.sellerId, seller.id), eq(schema.agentActions.status, "pending_approval")),
       orderBy: desc(schema.agentActions.createdAt),
@@ -54,18 +83,27 @@ export default async function Inbox() {
       orderBy: desc(schema.orders.createdAt),
     }),
     db.query.agentActions.findMany({
-      where: eq(schema.agentActions.sellerId, seller.id),
+      where: and(
+        eq(schema.agentActions.sellerId, seller.id),
+        filterTools ? inArray(schema.agentActions.tool, [...filterTools]) : undefined,
+      ),
       orderBy: desc(schema.agentActions.createdAt),
       limit: 30,
     }),
     db.query.products.findMany({ where: eq(schema.products.sellerId, seller.id) }),
+    db
+      .select({ dispute: schema.disputes, order: schema.orders })
+      .from(schema.disputes)
+      .innerJoin(schema.orders, eq(schema.disputes.orderId, schema.orders.id))
+      .where(and(eq(schema.orders.sellerId, seller.id), ne(schema.disputes.status, "RESOLVED")))
+      .orderBy(asc(schema.disputes.responseDueAt)),
   ]);
 
   const orderIds = [...new Set([...pending, ...activity].map((a) => a.orderId).filter((id): id is string => !!id))];
   const orders = orderIds.length
     ? await db.query.orders.findMany({ where: inArray(schema.orders.id, orderIds) })
     : [];
-  const orderById = new Map([...orders, ...toShip].map((o) => [o.id, o]));
+  const orderById = new Map([...orders, ...toShip, ...openDisputes.map((d) => d.order)].map((o) => [o.id, o]));
   const titleById = new Map(products.map((p) => [p.id, p.title]));
 
   const describeOrder = (orderId: string | null) => {
@@ -110,6 +148,47 @@ export default async function Inbox() {
         )}
       </Section>
 
+      <Section title="Open disputes" count={openDisputes.length}>
+        {openDisputes.length === 0 ? (
+          <Empty>No open disputes.</Empty>
+        ) : (
+          <ul className="space-y-3">
+            {openDisputes.map(({ dispute: d, order: o }) => {
+              const due = dueLabel(d.responseDueAt);
+              return (
+                <li key={d.id} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="font-medium">
+                      {DISPUTE_REASON[d.reason ?? ""] ?? "Buyer opened a dispute"}
+                      {d.amountCents != null && ` · ${usd(d.amountCents)}`}
+                    </p>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        due.urgent
+                          ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                          : "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                      }`}
+                    >
+                      {due.text}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-sm opacity-70">{describeOrder(o.id)}</p>
+                  {d.aiRecommendation && (
+                    <p className="mt-2 text-sm">
+                      <span className="opacity-60">Agent: </span>
+                      {d.aiRecommendation}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs opacity-60">
+                    PayPal case {d.paypalDisputeId}. Refunds on this order are paused until it&apos;s resolved.
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Section>
+
       <Section title="Ready to ship" count={toShip.length}>
         {toShip.length === 0 ? (
           <Empty>No paid orders waiting to ship.</Empty>
@@ -127,8 +206,24 @@ export default async function Inbox() {
       </Section>
 
       <Section title="Agent activity">
+        <nav className="mb-3 flex flex-wrap gap-2 text-sm">
+          {(Object.keys(FILTERS) as Filter[]).map((key) => (
+            <Link
+              key={key}
+              href={key === "all" ? "/seller/inbox" : `/seller/inbox?show=${key}`}
+              scroll={false}
+              className={`rounded-full border px-3 py-1 transition-colors ${
+                key === filter
+                  ? "border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900"
+                  : "border-stone-300 hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-900"
+              }`}
+            >
+              {FILTERS[key].label}
+            </Link>
+          ))}
+        </nav>
         {activity.length === 0 ? (
-          <Empty>No agent activity yet.</Empty>
+          <Empty>{filter === "all" ? "No agent activity yet." : `No ${FILTERS[filter].label.toLowerCase()} yet.`}</Empty>
         ) : (
           <ol className="divide-y divide-stone-200 dark:divide-stone-800">
             {activity.map((a) => {

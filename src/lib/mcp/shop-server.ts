@@ -64,7 +64,7 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
     "search_products",
     {
       title: "Search products",
-      description: `Search ${seller.name}'s catalog. Leave query empty to list everything. Prices are USD; shipping is a flat ${usd(SHIPPING_CENTS)}.`,
+      description: `Search the ${seller.name} catalog. Leave query empty to list everything. Prices are USD; shipping is a flat ${usd(SHIPPING_CENTS)}.`,
       inputSchema: {
         query: z.string().optional().describe("Keywords, e.g. 'lavender' or 'gift set'"),
         max_price_usd: z.number().positive().optional().describe("Only products at or under this price"),
