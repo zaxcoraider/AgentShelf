@@ -17,7 +17,7 @@ export const SHIPPING_CENTS = 595;
 export const MAX_QUANTITY = 5;
 
 // Render sets RENDER_EXTERNAL_URL, so APP_URL only needs setting for a custom domain.
-const appUrl = () => process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:3000";
+export const appUrl = () => process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:3000";
 
 export class ShopError extends Error {}
 
