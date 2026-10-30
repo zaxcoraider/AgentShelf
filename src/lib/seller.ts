@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "./db";
 
-/** The demo seller every seller page acts as. Swap for a session lookup when sign-in lands. */
+/** The demo seller. Seller pages get it through requireSeller (src/lib/seller-session.ts), which checks the sign-in. */
 export const DEMO_SELLER_SLUG = "mayas-candles";
 
 export async function currentSeller() {

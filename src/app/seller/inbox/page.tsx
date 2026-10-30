@@ -3,7 +3,8 @@ import Link from "next/link";
 import { db, schema } from "@/lib/db";
 import type { AgentAction } from "@/lib/db/schema";
 import { usd } from "@/lib/money";
-import { currentSeller, timeAgo } from "@/lib/seller";
+import { timeAgo } from "@/lib/seller";
+import { requireSeller } from "@/lib/seller-session";
 import { aiConfigured } from "@/lib/ai";
 import { ApprovalButtons, AskAgent, ShipForm } from "./forms";
 
@@ -70,7 +71,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 export default async function Inbox({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
-  const seller = await currentSeller();
+  const seller = await requireSeller();
   const { show } = await searchParams;
   const filter: Filter = show && show in FILTERS ? (show as Filter) : "all";
   const filterTools = FILTERS[filter].tools;

@@ -99,6 +99,8 @@ flowchart LR
 
 The assistant returns a PayPal link; approve it with a PayPal **sandbox** buyer account (login details are in the Devpost submission).
 
+**Seller side** (`/seller/*`: Inbox, Add products, Connect your AI) asks for the demo password, also in the Devpost submission. Locally, leave `SELLER_DEMO_PASSWORD` empty and it opens without one.
+
 ## Run it locally
 
 Needs Node.js 22+ and a PayPal developer account (sandbox). No database install: locally AgentShelf uses PGlite, an embedded Postgres stored in `.data/`.

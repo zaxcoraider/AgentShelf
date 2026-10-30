@@ -1,6 +1,6 @@
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { currentSeller } from "@/lib/seller";
+import { requireSeller } from "@/lib/seller-session";
 import { requestBaseUrl } from "@/lib/base-url";
 import { ConnectionTest, CopyButton, SetupTabs, Snippet, type SetupGuide } from "./widgets";
 
@@ -17,7 +17,7 @@ const TOOLS = [
 ];
 
 export default async function Connect() {
-  const seller = await currentSeller();
+  const seller = await requireSeller();
   const mcpUrl = `${await requestBaseUrl()}/api/mcp/${seller.slug}`;
   const isLocal = /^https?:\/\/(localhost|127\.|0\.0\.0\.0)/.test(mcpUrl);
 
