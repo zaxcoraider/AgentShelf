@@ -16,7 +16,7 @@ type V4Tool = {
   execute: (args: unknown, options: unknown) => Promise<unknown>;
 };
 
-/** Toolkit actions the seller agent may use. Everything else stays off. */
+/** Every toolkit action AgentShelf uses (smoke tests, catalog onboarding). */
 const SELLER_ACTIONS = {
   products: { create: true, list: true, show: true },
   orders: { get: true },
@@ -28,19 +28,40 @@ const SELLER_ACTIONS = {
   insights: { get: true },
 };
 
-let toolkit: PayPalAgentToolkit | null = null;
+/**
+ * What the seller agent gets: look, never touch. Refunds and tracking go through our
+ * guarded tools (src/lib/agent), so create_refund, create_shipment_tracking,
+ * accept_dispute_claim, and invoice sending are left out on purpose.
+ */
+const READ_ONLY_ACTIONS = {
+  products: { list: true, show: true },
+  orders: { get: true },
+  payments: { getRefunds: true },
+  shipment: { get: true },
+  disputes: { list: true, get: true },
+  invoices: { list: true, get: true },
+  transactions: { list: true },
+  insights: { get: true },
+};
 
-function getToolkit() {
-  toolkit ??= new PayPalAgentToolkit({
-    clientId: process.env.PAYPAL_CLIENT_ID!,
-    clientSecret: process.env.PAYPAL_CLIENT_SECRET!,
-    configuration: { actions: SELLER_ACTIONS, context: { sandbox: true } },
-  });
+const PRESETS = { seller: SELLER_ACTIONS, readOnly: READ_ONLY_ACTIONS };
+const toolkits = new Map<keyof typeof PRESETS, PayPalAgentToolkit>();
+
+function getToolkit(preset: keyof typeof PRESETS) {
+  let toolkit = toolkits.get(preset);
+  if (!toolkit) {
+    toolkit = new PayPalAgentToolkit({
+      clientId: process.env.PAYPAL_CLIENT_ID!,
+      clientSecret: process.env.PAYPAL_CLIENT_SECRET!,
+      configuration: { actions: PRESETS[preset], context: { sandbox: true } },
+    });
+    toolkits.set(preset, toolkit);
+  }
   return toolkit;
 }
 
-export function paypalTools(): ToolSet {
-  const raw = getToolkit().getTools() as unknown as Record<string, V4Tool>;
+export function paypalTools(preset: keyof typeof PRESETS = "seller"): ToolSet {
+  const raw = getToolkit(preset).getTools() as unknown as Record<string, V4Tool>;
   return Object.fromEntries(
     Object.entries(raw).map(([name, t]) => [
       name,

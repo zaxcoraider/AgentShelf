@@ -1,3 +1,6 @@
+import { after } from "next/server";
+import { aiConfigured } from "@/lib/ai";
+import { reviewDispute } from "@/lib/agent/seller-agent";
 import { verifyWebhook, type PaypalEvent } from "@/lib/paypal/webhooks";
 import { handleWebhook } from "@/lib/webhooks";
 
@@ -30,8 +33,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const outcome = await handleWebhook(event);
+    const { outcome, newDisputeId } = await handleWebhook(event);
     console.log(`[webhook] ${event.event_type} ${event.id}: ${outcome}`);
+    if (newDisputeId && aiConfigured("agent")) {
+      // Reply to PayPal right away; the agent reviews the dispute after the response is sent.
+      after(() => reviewDispute(newDisputeId).catch((err) => console.error("[webhook] dispute review failed:", err)));
+    }
     return Response.json({ ok: true, outcome });
   } catch (err) {
     console.error(`[webhook] ${event.event_type} ${event.id} failed:`, err);

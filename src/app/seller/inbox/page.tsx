@@ -4,7 +4,8 @@ import { db, schema } from "@/lib/db";
 import type { AgentAction } from "@/lib/db/schema";
 import { usd } from "@/lib/money";
 import { currentSeller, timeAgo } from "@/lib/seller";
-import { ApprovalButtons, ShipForm } from "./forms";
+import { aiConfigured } from "@/lib/ai";
+import { ApprovalButtons, AskAgent, ShipForm } from "./forms";
 
 // Seller inbox: refunds waiting for approval, paid orders to ship, and everything the agent did.
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ const TOOL_LABEL: Record<string, string> = {
   create_shipment_tracking: "Shipment tracking",
   create_refund: "Refund",
   get_dispute: "Dispute review",
+  review_dispute: "Dispute review",
 };
 
 /** Activity log filters: which tools each one shows. */
@@ -31,7 +33,7 @@ const FILTERS = {
   all: { label: "All", tools: null },
   refunds: { label: "Refunds", tools: ["refund_order", "create_refund"] },
   tracking: { label: "Tracking", tools: ["add_tracking", "create_shipment_tracking"] },
-  disputes: { label: "Disputes", tools: ["get_dispute"] },
+  disputes: { label: "Disputes", tools: ["get_dispute", "review_dispute"] },
 } as const;
 type Filter = keyof typeof FILTERS;
 
@@ -120,6 +122,10 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
       <p className="mt-1 text-sm opacity-70">
         Your agent refunds up to {usd(seller.refundAutoLimitCents)} on its own. Anything larger waits here for you.
       </p>
+
+      <div className="mt-6">
+        <AskAgent enabled={aiConfigured("agent")} />
+      </div>
 
       <Section title="Needs your approval" count={pending.length}>
         {pending.length === 0 ? (

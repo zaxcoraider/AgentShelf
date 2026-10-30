@@ -11,6 +11,7 @@
     "smoke:ai": "tsx --env-file=.env scripts/smoke-ai.mts",
     "smoke:paypal": "tsx --env-file=.env scripts/smoke-paypal.mts",
     "smoke:agent": "tsx --env-file=.env scripts/smoke-agent.mts",
+    "smoke:seller-agent": "tsx --env-file-if-exists=.env scripts/smoke-seller-agent.mts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/db-migrate.mts",
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed.mts",

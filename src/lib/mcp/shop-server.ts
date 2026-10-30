@@ -1,7 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { Seller } from "../db/schema";
+import { aiConfigured } from "../ai";
 import { requestRefund } from "../agent/actions";
+import { reviewRefundRequest } from "../agent/seller-agent";
 import {
   askSeller,
   findOrder,
@@ -188,10 +190,15 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
         if (!order || order.buyerEmail?.toLowerCase() !== buyer_email.trim().toLowerCase()) {
           return fail("No paid order matches that order id and email.");
         }
-        const result = await requestRefund(order.id, `Buyer's assistant: "${reason.trim()}"`, {
-          amountCents: amount_usd != null ? Math.round(amount_usd * 100) : undefined,
-          note: `Refund from ${seller.name}`,
-        });
+        const amountCents = amount_usd != null ? Math.round(amount_usd * 100) : undefined;
+        // With a model configured the seller agent reviews the reason against the policy first;
+        // without one, the guardrails alone decide.
+        const result = aiConfigured("agent")
+          ? await reviewRefundRequest(seller, order, { reason: reason.trim(), amountCents })
+          : await requestRefund(order.id, `Buyer's assistant: "${reason.trim()}"`, {
+              amountCents,
+              note: `Refund from ${seller.name}`,
+            });
         const outcome = {
           auto: "refunded",
           pending_approval: "waiting_for_seller",

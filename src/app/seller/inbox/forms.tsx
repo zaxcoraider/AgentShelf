@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { approve, reject, ship, type FormState } from "./actions";
+import { askAgent, approve, reject, ship, type FormState } from "./actions";
 
 function Feedback({ state }: { state: FormState }) {
   if (!state) return null;
@@ -71,6 +71,60 @@ export function ShipForm({ orderId }: { orderId: string }) {
         </button>
       </div>
       <Feedback state={state} />
+    </form>
+  );
+}
+
+const SUGGESTIONS = [
+  "Review the open disputes and tell me what to do",
+  "Which paid orders still need to ship?",
+  "Summarize this week's refunds",
+];
+
+export function AskAgent({ enabled }: { enabled: boolean }) {
+  const [state, action, pending] = useActionState(askAgent, null);
+  return (
+    <form action={action} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
+      <label htmlFor="task" className="text-sm font-medium">
+        Ask your agent
+      </label>
+      <div className="mt-2 flex gap-2">
+        <input
+          id="task"
+          name="task"
+          required
+          disabled={!enabled || pending}
+          placeholder={enabled ? "e.g. Ship order … with USPS 9400111…" : "Connect an AI model to talk to your agent"}
+          className="min-w-0 flex-1 rounded-md border border-stone-300 bg-transparent px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-700"
+        />
+        <button disabled={!enabled || pending} className={`${button} bg-stone-900 text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900`}>
+          {pending ? "Working…" : "Send"}
+        </button>
+      </div>
+      {enabled && !state && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              disabled={pending}
+              onClick={(e) => {
+                const input = e.currentTarget.form?.elements.namedItem("task") as HTMLInputElement | null;
+                if (input) input.value = s;
+              }}
+              className="rounded-full border border-stone-300 px-2.5 py-0.5 text-xs opacity-80 hover:opacity-100 dark:border-stone-700"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+      {state && (
+        <div role="status" className="mt-3 text-sm">
+          <p className={`whitespace-pre-wrap ${state.ok ? "" : "text-red-700 dark:text-red-400"}`}>{state.text}</p>
+          {state.tools.length > 0 && <p className="mt-2 text-xs opacity-60">Used: {[...new Set(state.tools)].join(", ")}</p>}
+        </div>
+      )}
     </form>
   );
 }

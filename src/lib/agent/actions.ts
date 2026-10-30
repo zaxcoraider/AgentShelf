@@ -11,7 +11,12 @@ import { decideRefund } from "./guardrails";
  * Used by the agent's tools and by the seller's approve/reject buttons.
  */
 
-type RefundInput = { amountCents?: number; note?: string };
+type RefundInput = {
+  amountCents?: number;
+  note?: string;
+  /** Send it to the seller even if the rules would allow an automatic refund (the agent isn't sure). */
+  askSeller?: boolean;
+};
 
 export type ActionResult = { action: AgentAction; message: string };
 
@@ -85,9 +90,10 @@ export async function requestRefund(orderId: string, reason: string, input: Refu
   }
 
   const actionInput = { amountCents: decision.amountCents, note: input.note };
-  if (decision.kind === "needs_approval") {
-    const action = await log({ ...base, input: actionInput, status: "pending_approval", reason: `${reason} ${decision.why}` });
-    return { action, message: `Sent to the seller for approval: ${decision.why}` };
+  if (decision.kind === "needs_approval" || input.askSeller) {
+    const why = decision.kind === "needs_approval" ? decision.why : "The agent asked you to decide.";
+    const action = await log({ ...base, input: actionInput, status: "pending_approval", reason: `${reason} ${why}` });
+    return { action, message: `Sent to the seller for approval: ${why}` };
   }
 
   // Log first so the action id doubles as PayPal's idempotency key.
@@ -199,4 +205,24 @@ export async function markShipped(
     const action = await log({ ...base, status: "failed", output: { error: errorText(err) }, reason });
     return { action, message: `PayPal refused the tracking update: ${errorText(err)}` };
   }
+}
+
+/** The agent's verdict on a PayPal dispute. Advice only: the seller responds in PayPal. */
+export async function recordDisputeReview(disputeId: string, recommendation: string): Promise<ActionResult> {
+  const dispute = await db.query.disputes.findFirst({ where: eq(schema.disputes.id, disputeId) });
+  if (!dispute) throw new ActionError(`No dispute ${disputeId}.`);
+  const { order, seller } = await loadOrder(dispute.orderId);
+  await db
+    .update(schema.disputes)
+    .set({ aiRecommendation: recommendation, updatedAt: new Date() })
+    .where(eq(schema.disputes.id, dispute.id));
+  const action = await log({
+    sellerId: seller.id,
+    orderId: order.id,
+    tool: "review_dispute",
+    input: { paypalDisputeId: dispute.paypalDisputeId },
+    status: "auto",
+    reason: recommendation,
+  });
+  return { action, message: "Recommendation saved for the seller." };
 }

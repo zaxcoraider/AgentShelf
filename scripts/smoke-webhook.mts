@@ -49,7 +49,7 @@ try {
     ["unhandled type", event(8, "BILLING.PLAN.CREATED", {}), () => {}],
   ];
   for (const [label, ev, check] of steps) {
-    const outcome = await handleWebhook(ev);
+    const { outcome } = await handleWebhook(ev);
     check(await reload());
     console.log(`ok  ${label}: ${outcome}`);
   }

@@ -10,7 +10,9 @@ import { completeCheckout, markPaid } from "./shop";
  * deliver an event more than once; each event id is processed at most once, and every
  * update is written so that replaying it changes nothing.
  */
-export async function handleWebhook(event: PaypalEvent): Promise<string> {
+export type WebhookResult = { outcome: string; newDisputeId?: string };
+
+export async function handleWebhook(event: PaypalEvent): Promise<WebhookResult> {
   const intent = interpretEvent(event);
   const resourceId = typeof event.resource?.id === "string" ? event.resource.id : null;
 
@@ -19,18 +21,18 @@ export async function handleWebhook(event: PaypalEvent): Promise<string> {
     .values({ id: event.id, type: event.event_type, resourceId, payload: event })
     .onConflictDoNothing()
     .returning({ id: schema.webhookEvents.id });
-  if (!fresh) return "duplicate delivery, skipped";
+  if (!fresh) return { outcome: "duplicate delivery, skipped" };
 
-  let outcome: string;
+  let result: WebhookResult;
   try {
-    outcome = await apply(intent);
+    result = await apply(intent);
   } catch (err) {
     // Forget the event so PayPal's retry gets a clean second attempt.
     await db.delete(schema.webhookEvents).where(eq(schema.webhookEvents.id, event.id));
     throw err;
   }
-  await db.update(schema.webhookEvents).set({ outcome }).where(eq(schema.webhookEvents.id, event.id));
-  return outcome;
+  await db.update(schema.webhookEvents).set({ outcome: result.outcome }).where(eq(schema.webhookEvents.id, event.id));
+  return result;
 }
 
 const findBy = {
@@ -38,7 +40,12 @@ const findBy = {
   captureId: (id: string) => db.query.orders.findFirst({ where: eq(schema.orders.captureId, id) }),
 };
 
-async function apply(intent: WebhookIntent): Promise<string> {
+async function apply(intent: WebhookIntent): Promise<WebhookResult> {
+  if (intent.kind === "dispute") return applyDispute(intent);
+  return { outcome: await applyPayment(intent) };
+}
+
+async function applyPayment(intent: Exclude<WebhookIntent, { kind: "dispute" }>): Promise<string> {
   switch (intent.kind) {
     case "order_approved": {
       const order = await findBy.paypalOrderId(intent.paypalOrderId);
@@ -80,33 +87,38 @@ async function apply(intent: WebhookIntent): Promise<string> {
       return `recorded refund made outside AgentShelf; ${usd(refundedCents)} refunded in total`;
     }
 
-    case "dispute": {
-      const [order] = intent.captureIds.length
-        ? await db.select().from(schema.orders).where(inArray(schema.orders.captureId, intent.captureIds)).limit(1)
-        : [];
-      if (!order) return "ignored: dispute on a payment AgentShelf doesn't know";
-      const fields = {
-        status: intent.status,
-        reason: intent.reason,
-        amountCents: intent.amountCents,
-        responseDueAt: intent.responseDueAt,
-        updatedAt: new Date(),
-      };
-      await db
-        .insert(schema.disputes)
-        .values({ orderId: order.id, paypalDisputeId: intent.disputeId, ...fields })
-        .onConflictDoUpdate({ target: schema.disputes.paypalDisputeId, set: fields });
-      // An open dispute freezes the order: the agent's guardrails refuse to refund disputed orders.
-      if (intent.status !== "RESOLVED" && order.status !== "disputed") {
-        await db
-          .update(schema.orders)
-          .set({ status: "disputed", updatedAt: new Date() })
-          .where(eq(schema.orders.id, order.id));
-      }
-      return `dispute ${intent.disputeId} ${intent.status.toLowerCase()}`;
-    }
-
     case "ignored":
       return "ignored: event type not handled";
   }
+}
+
+async function applyDispute(intent: Extract<WebhookIntent, { kind: "dispute" }>): Promise<WebhookResult> {
+  const [order] = intent.captureIds.length
+    ? await db.select().from(schema.orders).where(inArray(schema.orders.captureId, intent.captureIds)).limit(1)
+    : [];
+  if (!order) return { outcome: "ignored: dispute on a payment AgentShelf doesn't know" };
+  const fields = {
+    status: intent.status,
+    reason: intent.reason,
+    amountCents: intent.amountCents,
+    responseDueAt: intent.responseDueAt,
+    updatedAt: new Date(),
+  };
+  const existing = await db.query.disputes.findFirst({ where: eq(schema.disputes.paypalDisputeId, intent.disputeId) });
+  const [dispute] = await db
+    .insert(schema.disputes)
+    .values({ orderId: order.id, paypalDisputeId: intent.disputeId, ...fields })
+    .onConflictDoUpdate({ target: schema.disputes.paypalDisputeId, set: fields })
+    .returning({ id: schema.disputes.id });
+  // An open dispute freezes the order: the agent's guardrails refuse to refund disputed orders.
+  if (intent.status !== "RESOLVED" && order.status !== "disputed") {
+    await db
+      .update(schema.orders)
+      .set({ status: "disputed", updatedAt: new Date() })
+      .where(eq(schema.orders.id, order.id));
+  }
+  return {
+    outcome: `dispute ${intent.disputeId} ${intent.status.toLowerCase()}`,
+    newDisputeId: existing || intent.status === "RESOLVED" ? undefined : dispute.id,
+  };
 }
