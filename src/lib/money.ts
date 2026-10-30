@@ -1,2 +1,3 @@
 /** Money is integer cents (USD) everywhere; format only at the edges. */
-export const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+export const usd = (cents: number) => formatter.format(cents / 100);

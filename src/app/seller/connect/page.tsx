@@ -1,21 +1,11 @@
 import { and, count, desc, eq, sql } from "drizzle-orm";
-import { headers } from "next/headers";
 import { db, schema } from "@/lib/db";
 import { currentSeller } from "@/lib/seller";
-import { appUrl } from "@/lib/shop";
+import { requestBaseUrl } from "@/lib/base-url";
 import { ConnectionTest, CopyButton, SetupTabs, Snippet, type SetupGuide } from "./widgets";
 
 // "Connect your AI": the shop's MCP URL, how to add it to each assistant, and a prompt to try.
 export const dynamic = "force-dynamic";
-
-/** The address this page was opened on, so the URL shown is one that actually reaches this server. */
-async function baseUrl() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  if (!host) return appUrl();
-  const proto = h.get("x-forwarded-proto")?.split(",")[0] ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
 
 const TOOLS = [
   ["Search products", "Finds items by keywords and price."],
@@ -28,7 +18,7 @@ const TOOLS = [
 
 export default async function Connect() {
   const seller = await currentSeller();
-  const mcpUrl = `${await baseUrl()}/api/mcp/${seller.slug}`;
+  const mcpUrl = `${await requestBaseUrl()}/api/mcp/${seller.slug}`;
   const isLocal = /^https?:\/\/(localhost|127\.|0\.0\.0\.0)/.test(mcpUrl);
 
   const assistants = await db
