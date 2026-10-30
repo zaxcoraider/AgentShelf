@@ -31,6 +31,16 @@ export type Db = ReturnType<typeof connect>;
 // Reuse one connection across Next.js dev hot reloads.
 const globalForDb = globalThis as unknown as { agentshelfDb?: Db };
 
-export const db: Db = (globalForDb.agentshelfDb ??= connect());
+const instance = () => (globalForDb.agentshelfDb ??= connect());
+
+// Connect on first use, not on import: `next build` imports every route in parallel workers,
+// and several processes opening the same PGlite folder at once fails (or corrupts it).
+export const db = new Proxy({} as Db, {
+  get(_, prop) {
+    const real = instance();
+    const value = Reflect.get(real, prop, real);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});
 
 export { schema };
