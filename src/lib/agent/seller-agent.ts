@@ -36,7 +36,7 @@ function systemPrompt(seller: Seller) {
     "- Use lookup_order before acting on an order. Use the PayPal tools only to read (orders, refunds, shipments, disputes, transactions).",
     "- Orders marked demo are seeded history with no real PayPal payment: you can read them but every action on them is blocked.",
     `- Every reason you write is shown to ${owner}: one or two plain sentences, cite the policy line you relied on.`,
-    `- Finish with a short summary for ${owner} of what you did and what needs them. No markdown headings.`,
+    `- Finish with a short summary for ${owner} of what you did and what needs them. Plain text only: no markdown (no **, #, or tables); short lines starting with "- " are fine.`,
   ].join("\n");
 }
 
@@ -93,7 +93,9 @@ function sellerTools(seller: Seller): ToolSet {
 
   return {
     lookup_order: tool({
-      description: "Details of one order in this shop: product, amounts, status, tracking, disputes, past agent actions.",
+      description:
+        "Details of one order in this shop: product, amounts, status, tracking, disputes, past agent actions. " +
+        "For PayPal's dispute tools use paypalDisputeId; disputeId is AgentShelf's own id.",
       inputSchema: z.object({ order_id: z.string().describe("AgentShelf order id or PayPal order id") }),
       execute: async ({ order_id }) => describeOrder(await own(order_id)),
     }),
