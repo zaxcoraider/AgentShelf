@@ -13,6 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute base for the social preview image (Render sets RENDER_EXTERNAL_URL).
+  metadataBase: new URL(process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:3000"),
   title: "AgentShelf",
   description: "Make any small shop buyable by AI assistants, with PayPal checkout and a seller agent that follows your rules.",
 };

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Logo } from "@/components/logo";
 import { sellerAuthEnabled } from "@/lib/session";
 import { SignInForm } from "./form";
 
@@ -11,8 +12,8 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
   const { next } = await searchParams;
   return (
     <main className="mx-auto max-w-sm px-4 py-16">
-      <Link href="/" className="text-sm font-semibold">
-        AgentShelf
+      <Link href="/">
+        <Logo />
       </Link>
       <h1 className="mt-6 text-2xl font-semibold tracking-tight">Seller sign-in</h1>
       <p className="mt-1 text-sm opacity-70">

@@ -1,3 +1,5 @@
+<p align="center"><img src="public/brand/agentshelf-icon.svg" width="96" height="96" alt="AgentShelf logo"></p>
+
 # AgentShelf
 
 **Any small shop, buyable by AI assistants, with PayPal checkout and a seller agent that follows your rules.**

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/app/signin/actions";
+import { Logo } from "@/components/logo";
 import { DEMO_SELLER_SLUG } from "@/lib/seller";
 import { sellerAuthEnabled } from "@/lib/session";
 
@@ -16,8 +17,8 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
     <>
       <nav className="border-b border-stone-200 dark:border-stone-800">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-5 gap-y-1 px-4 py-3 text-sm sm:px-6">
-          <Link href="/" className="font-semibold">
-            AgentShelf
+          <Link href="/">
+            <Logo size={24} />
           </Link>
           {LINKS.map((l) => (
             <Link key={l.href} href={l.href} className="opacity-70 transition-opacity hover:opacity-100">

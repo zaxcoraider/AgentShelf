@@ -1,6 +1,7 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import Link from "next/link";
 import { CopyButton } from "@/app/seller/connect/widgets";
+import { Logo } from "@/components/logo";
 import { requestBaseUrl } from "@/lib/base-url";
 import { db, schema } from "@/lib/db";
 import { usd } from "@/lib/money";
@@ -83,7 +84,7 @@ export default async function Home() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
       <nav className="flex items-center justify-between py-5 text-sm">
-        <span className="font-semibold">AgentShelf</span>
+        <Logo />
         <a href="https://github.com/zaxcoraider/AgentShelf" className="opacity-70 hover:opacity-100">
           GitHub
         </a>
