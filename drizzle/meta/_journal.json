@@ -15,6 +15,13 @@
       "when": 1793275930047,
       "tag": "0001_action_blocked",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793357476631,
+      "tag": "0002_webhooks",
+      "breakpoints": true
     }
   ]
 }

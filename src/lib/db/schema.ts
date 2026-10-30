@@ -128,7 +128,22 @@ export const disputes = pgTable("disputes", {
   paypalDisputeId: text("paypal_dispute_id").unique(),
   reason: text("reason"),
   status: text("status").notNull(),
+  amountCents: integer("amount_cents"),
+  /** When the seller must respond in PayPal; drives the "disputes due soon" countdown. */
+  responseDueAt: timestamp("response_due_at", { withTimezone: true }),
   aiRecommendation: text("ai_recommendation"),
+  ...timestamps,
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Every PayPal webhook we accepted, keyed by PayPal's event id so redeliveries are skipped. */
+export const webhookEvents = pgTable("webhook_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  resourceId: text("resource_id"),
+  /** What the handler did, in a few words ("order paid", "ignored: unknown order"). */
+  outcome: text("outcome"),
+  payload: jsonb("payload").$type<unknown>().notNull(),
   ...timestamps,
 });
 
@@ -137,3 +152,4 @@ export type Product = typeof products.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type AgentAction = typeof agentActions.$inferSelect;
 export type Dispute = typeof disputes.$inferSelect;
+export type WebhookEvent = typeof webhookEvents.$inferSelect;

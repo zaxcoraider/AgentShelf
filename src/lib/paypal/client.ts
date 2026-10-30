@@ -73,16 +73,58 @@ export async function createOrder(opts: {
   return { id: result.id!, status: result.status, approveUrl };
 }
 
-export async function captureOrder(orderId: string) {
-  const { result } = await orders().captureOrder({ id: orderId, prefer: "return=representation" });
-  const capture = result.purchaseUnits?.[0]?.payments?.captures?.[0];
-  const name = result.payer?.name;
+type PaypalOrder = Awaited<ReturnType<OrdersController["getOrder"]>>["result"];
+
+/** The parts of a PayPal order we store once it's paid. */
+function paymentSummary(order: PaypalOrder) {
+  const capture = order.purchaseUnits?.[0]?.payments?.captures?.[0];
+  const name = order.payer?.name;
   return {
-    status: result.status,
+    status: order.status,
     captureId: capture?.id,
-    payerEmail: result.payer?.emailAddress,
+    payerEmail: order.payer?.emailAddress,
     payerName: [name?.givenName, name?.surname].filter(Boolean).join(" ") || undefined,
   };
+}
+
+export async function captureOrder(orderId: string) {
+  const { result } = await orders().captureOrder({ id: orderId, prefer: "return=representation" });
+  return paymentSummary(result);
+}
+
+/** Read an order without changing it (e.g. to see whether someone else already captured it). */
+export async function getOrderPayment(orderId: string) {
+  const { result } = await orders().getOrder({ id: orderId });
+  return paymentSummary(result);
+}
+
+const API_BASE = "https://api-m.sandbox.paypal.com";
+let token: { value: string; expiresAt: number } | null = null;
+
+/** OAuth token for the few REST calls the server SDK doesn't cover (webhook verification). */
+async function accessToken() {
+  if (token && token.expiresAt > Date.now() + 60_000) return token.value;
+  const basic = Buffer.from(`${required("PAYPAL_CLIENT_ID")}:${required("PAYPAL_CLIENT_SECRET")}`).toString("base64");
+  const res = await fetch(`${API_BASE}/v1/oauth2/token`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: "grant_type=client_credentials",
+  });
+  if (!res.ok) throw new Error(`PayPal OAuth failed: ${res.status}`);
+  const body = (await res.json()) as { access_token: string; expires_in: number };
+  token = { value: body.access_token, expiresAt: Date.now() + body.expires_in * 1000 };
+  return token.value;
+}
+
+/** POST to a PayPal REST endpoint with our app's token. */
+export async function paypalPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`PayPal ${path} failed: ${res.status} ${await res.text()}`);
+  return (await res.json()) as T;
 }
 
 const money = (cents: number) => ({ currencyCode: "USD", value: (cents / 100).toFixed(2) });

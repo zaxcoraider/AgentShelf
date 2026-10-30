@@ -1,10 +1,10 @@
 import { generateText } from "ai";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { aiConfigured, withFallback } from "./ai";
 import { db, schema } from "./db";
-import type { Product, Seller } from "./db/schema";
+import type { Order, Product, Seller } from "./db/schema";
 import { usd } from "./money";
-import { captureOrder, createOrder, type CheckoutChannel } from "./paypal/client";
+import { captureOrder, createOrder, getOrderPayment, type CheckoutChannel } from "./paypal/client";
 
 export { usd };
 
@@ -149,18 +149,34 @@ export async function startCheckout(
   };
 }
 
+const UNPAID: Order["status"][] = ["created", "approved"];
+
 /**
- * Capture an approved PayPal order (buyer came back from PayPal). Safe to call twice:
- * an order that is already paid is returned as is.
+ * Capture an approved PayPal order (buyer came back from PayPal, or PayPal's webhook said
+ * they approved). Safe to call twice or concurrently: only one caller marks it paid.
  */
 export async function completeCheckout(paypalOrderId: string) {
   const order = await db.query.orders.findFirst({ where: eq(schema.orders.paypalOrderId, paypalOrderId) });
   if (!order) throw new ShopError("We couldn't find that order.");
-  if (order.status !== "created" && order.status !== "approved") return order;
+  if (!UNPAID.includes(order.status)) return order;
 
-  const capture = await captureOrder(paypalOrderId);
+  let capture;
+  try {
+    capture = await captureOrder(paypalOrderId);
+  } catch (err) {
+    // The return page and the webhook can race; if the other one captured it, PayPal says so here.
+    capture = await getOrderPayment(paypalOrderId);
+    if (capture.status !== "COMPLETED") throw err;
+  }
   if (capture.status !== "COMPLETED") throw new ShopError(`PayPal returned status ${capture.status}.`);
+  return markPaid(order, capture);
+}
 
+/** Record a completed capture and take the items out of stock, once. */
+export async function markPaid(
+  order: Order,
+  capture: { captureId?: string; payerEmail?: string; payerName?: string },
+) {
   return db.transaction(async (tx) => {
     const [paid] = await tx
       .update(schema.orders)
@@ -171,8 +187,12 @@ export async function completeCheckout(paypalOrderId: string) {
         buyerName: capture.payerName,
         updatedAt: new Date(),
       })
-      .where(eq(schema.orders.id, order.id))
+      .where(and(eq(schema.orders.id, order.id), inArray(schema.orders.status, UNPAID)))
       .returning();
+    if (!paid) {
+      // Someone else got there first.
+      return (await tx.query.orders.findFirst({ where: eq(schema.orders.id, order.id) }))!;
+    }
     if (order.productId) {
       await tx
         .update(schema.products)
