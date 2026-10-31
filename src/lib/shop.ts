@@ -124,6 +124,7 @@ export async function startCheckout(
     description: `${seller.name}: ${product.title} x${opts.quantity}`,
     channel: opts.channel,
     agentName: opts.agentName,
+    brandName: seller.name,
     returnUrl: `${appUrl()}/checkout/return`,
     cancelUrl: `${appUrl()}/checkout/cancel`,
   });

@@ -44,6 +44,8 @@ export async function createOrder(opts: {
   description: string;
   channel: CheckoutChannel;
   agentName?: string;
+  /** Shown on PayPal's approval page instead of the PayPal account's own name. */
+  brandName: string;
   returnUrl: string;
   cancelUrl: string;
 }) {
@@ -60,6 +62,7 @@ export async function createOrder(opts: {
       paymentSource: {
         paypal: {
           experienceContext: {
+            brandName: opts.brandName.slice(0, 127),
             returnUrl: opts.returnUrl,
             cancelUrl: opts.cancelUrl,
             userAction: PaypalExperienceUserAction.PayNow,

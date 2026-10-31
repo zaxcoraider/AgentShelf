@@ -14,6 +14,7 @@ if (!orderId) {
     description: "Lavender soy candle (smoke test)",
     channel: "ai_agent",
     agentName: "smoke-test",
+    brandName: "AgentShelf smoke test",
     returnUrl: `${appUrl}/checkout/return`,
     cancelUrl: `${appUrl}/checkout/cancel`,
   });
