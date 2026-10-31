@@ -19,7 +19,9 @@ Built for [Build What's Next with PayPal and AI](https://paypalaihackathon.devpo
 | 🔌 | **Connect your AI.** The shop's MCP URL, a live connection test, and setup steps for Claude, Claude Desktop, Claude Code, ChatGPT, and Cursor. | `/seller/connect` |
 | 🛍️ | **Storefront for humans.** The same catalog with **PayPal JS SDK v6** buttons. | `/shop/<shop>` |
 | 🧾 | **Seller agent.** Reviews buyers' refund requests against the shop policy, refunds within the rules, escalates the rest, adds tracking, and recommends how to answer disputes. The seller can also give it instructions in plain English. | `src/lib/agent/` |
-| ✅ | **Seller Inbox.** Approval queue for refunds over the limit, orders to ship, open disputes with response-deadline countdowns, and a filterable log of everything the agent did. | `/seller/inbox` |
+| ✅ | **Seller Inbox, live.** Approval queue for refunds over the limit, orders to ship, open disputes with response-deadline countdowns, and a filterable log of everything the agent did. New orders and agent actions slide in as they happen. | `/seller/inbox` |
+| 📊 | **Seller dashboard (AG Studio).** Net sales, order count, the share bought by AI assistants, open disputes, daily sales split by AI vs storefront, sales by assistant and by product, the agent's actions, and every order, all cross-filterable and editable in AG Studio's drag-and-drop editor. | `/seller/dashboard` |
+| 👀 | **Your shop through AI's eyes.** An AI-readiness score that flags facts an assistant would have to guess (no size, no shipping countries), the exact data assistants receive, and a box to ask the shop questions like a shopper would. | `/seller/ai-view` |
 | 🔔 | **Webhooks.** Verified PayPal webhooks keep orders, refunds, and disputes in sync, even when the buyer closes the tab before returning, or the seller refunds in PayPal directly. | `/api/webhooks/paypal` |
 
 ## PayPal APIs and SDKs used
@@ -72,7 +74,7 @@ flowchart LR
     SHOP["Shop logic<br/>checkout · capture · Q&A"]
     AGENT["Seller agent<br/>AI SDK + Agent Toolkit"]
     GUARD["Guardrails<br/>limits · approvals · log"]
-    UI["Seller app<br/>Inbox · Add products · Connect"]
+    UI["Seller app<br/>Inbox · Dashboard (AG Studio) · Add products · AI's view"]
     WH["Webhook handler<br/>verified, idempotent"]
     DB[("Postgres<br/>orders · actions · disputes")]
   end
@@ -106,7 +108,7 @@ flowchart LR
 
 The assistant returns a PayPal link; approve it with a PayPal **sandbox** buyer account (login details are in the Devpost submission).
 
-**Seller side** (`/seller/*`: Inbox, Add products, Connect your AI) asks for the demo password, also in the Devpost submission. Locally, leave `SELLER_DEMO_PASSWORD` empty and it opens without one.
+**Seller side** (`/seller/*`: Inbox, Dashboard, Add products, AI's view, Connect your AI) asks for the demo password, also in the Devpost submission. Locally, leave `SELLER_DEMO_PASSWORD` empty and it opens without one.
 
 ## Run it locally
 
@@ -140,7 +142,11 @@ Useful scripts:
 
 ## Built with
 
-Next.js 15 · React 19 · Tailwind CSS 4 · Vercel AI SDK · Model Context Protocol TypeScript SDK · PayPal Agent Toolkit · PayPal Server SDK · PayPal JS SDK v6 · Drizzle ORM · Postgres / PGlite · Nebius Token Factory · Render
+Next.js 15 · React 19 · Tailwind CSS 4 · Motion · Vercel AI SDK · Model Context Protocol TypeScript SDK + MCP Apps · AG Studio · PayPal Agent Toolkit · PayPal Server SDK · PayPal JS SDK v6 · Drizzle ORM · Postgres / PGlite · Nebius Token Factory · Render
+
+## Credits
+
+Demo product photos for the seeded shop are from [Unsplash](https://unsplash.com) (see [`scripts/seed-photos/CREDITS.md`](scripts/seed-photos/CREDITS.md)).
 
 ## License
 
