@@ -26,7 +26,7 @@ export function CopyButton({ text, label = "Copy", className = copyStyle }: { te
 export function Snippet({ code }: { code: string }) {
   return (
     <div className="relative mt-2">
-      <pre className="overflow-x-auto rounded-lg bg-stone-100 p-3 pr-20 font-mono text-xs leading-relaxed dark:bg-stone-900">{code}</pre>
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-stone-100 p-3 pr-20 font-mono text-xs leading-relaxed dark:bg-stone-900">{code}</pre>
       <div className="absolute right-2 top-2">
         <CopyButton text={code} />
       </div>

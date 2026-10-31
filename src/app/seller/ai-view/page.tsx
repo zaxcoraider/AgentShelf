@@ -24,7 +24,8 @@ export default async function AiView() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Your shop through AI&apos;s eyes</h1>
+      <p className="text-sm opacity-60">{seller.name}</p>
+      <h1 className="text-3xl font-semibold tracking-tight">Your shop through AI&apos;s eyes</h1>
       <p className="mt-2 opacity-75">
         This is exactly what Claude, ChatGPT, and other assistants get when a shopper asks about {seller.name}. If a fact
         isn&apos;t here, an assistant has to guess, so the check below finds the gaps.
