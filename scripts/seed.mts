@@ -5,15 +5,43 @@
  * Run: npm run db:seed            → seeds only if the shop doesn't exist yet
  *      npm run db:seed -- --reset → deletes the shop (and its orders) first
  */
-import { eq } from "drizzle-orm";
+import { existsSync, readFileSync } from "node:fs";
+import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "../src/lib/db";
 
 const SLUG = "mayas-candles";
 const reset = process.argv.includes("--reset");
 
+/**
+ * Give seeded products without a photo their stock photo from scripts/seed-photos (see CREDITS.md).
+ * Runs on every seed, so existing databases (like the deployed one) pick up photos too.
+ */
+async function attachSeedPhotos(sellerId: string) {
+  const bare = await db.query.products.findMany({
+    where: and(eq(schema.products.sellerId, sellerId), isNull(schema.products.imageUrl)),
+  });
+  let attached = 0;
+  for (const product of bare) {
+    const slug = product.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const file = new URL(`./seed-photos/${slug}.jpg`, import.meta.url);
+    if (!existsSync(file)) continue;
+    await db
+      .insert(schema.productImages)
+      .values({ productId: product.id, mediaType: "image/jpeg", data: readFileSync(file) })
+      .onConflictDoNothing();
+    await db
+      .update(schema.products)
+      .set({ imageUrl: `/images/products/${product.id}` })
+      .where(eq(schema.products.id, product.id));
+    attached++;
+  }
+  return attached;
+}
+
 const existing = await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, SLUG) });
 if (existing && !reset) {
-  console.log(`"${existing.name}" already seeded. Use --reset to recreate it.`);
+  const attached = await attachSeedPhotos(existing.id);
+  console.log(`"${existing.name}" already seeded${attached ? `; added ${attached} product photos` : ""}. Use --reset to recreate it.`);
   process.exit(0);
 }
 if (existing) await db.delete(schema.sellers).where(eq(schema.sellers.id, existing.id));
@@ -181,8 +209,10 @@ const disputeRows = orders
   }));
 if (disputeRows.length) await db.insert(schema.disputes).values(disputeRows);
 
+const photos = await attachSeedPhotos(seller.id);
+
 console.log(
-  `Seeded "${seller.name}": ${products.length} products, ${orders.length} orders ` +
+  `Seeded "${seller.name}": ${products.length} products (${photos} with photos), ${orders.length} orders ` +
     `(${orders.filter((o) => o.channel === "ai_agent").length} from AI shoppers), ${actions.length} agent actions, ${disputeRows.length} open disputes.`,
 );
 process.exit(0);
