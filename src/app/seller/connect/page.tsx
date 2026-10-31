@@ -48,7 +48,15 @@ export default async function Connect() {
         "Add this to claude_desktop_config.json, then restart Claude Desktop.",
       ],
       snippet: JSON.stringify(
-        { mcpServers: { [seller.slug]: { command: "npx", args: ["-y", "mcp-remote", mcpUrl] } } },
+        {
+          mcpServers: {
+            [seller.slug]: {
+              command: "npx",
+              // http-only keeps the product-card (MCP Apps) handshake intact; --allow-http permits localhost.
+              args: ["-y", "mcp-remote", mcpUrl, "--transport", "http-only", ...(mcpUrl.startsWith("http:") ? ["--allow-http"] : [])],
+            },
+          },
+        },
         null,
         2,
       ),
