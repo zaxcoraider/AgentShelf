@@ -14,6 +14,7 @@ Built for [Build What's Next with PayPal and AI](https://paypalaihackathon.devpo
 | --- | --- | --- |
 | 📸 | **Photo → listing.** Drop in product photos; a vision model drafts the title, description, scent, size, and a price that fits the shop. Publishing creates the product in the seller's **PayPal catalog** via the Agent Toolkit. | `/seller/listings` |
 | 🤖 | **A shop AI assistants can buy from.** Every shop has its own MCP server: search, product details, questions answered from the seller's policy, checkout as a **PayPal order** the buyer approves, order status, and refund requests. | `/api/mcp/<shop>` |
+| 🛍️ | **Product cards inside the chat (MCP Apps).** In Claude, ChatGPT, and other hosts that support MCP Apps, search results render as product cards with photos and a **Buy with PayPal** button. The card creates the PayPal order, opens PayPal for the buyer to approve, and flips to “Paid” once the payment is captured. Other assistants get the same data as text. | `src/lib/mcp/product-widget.ts` |
 | 🔌 | **Connect your AI.** The shop's MCP URL, a live connection test, and setup steps for Claude, Claude Desktop, Claude Code, ChatGPT, and Cursor. | `/seller/connect` |
 | 🛍️ | **Storefront for humans.** The same catalog with **PayPal JS SDK v6** buttons. | `/shop/<shop>` |
 | 🧾 | **Seller agent.** Reviews buyers' refund requests against the shop policy, refunds within the rules, escalates the rest, adds tracking, and recommends how to answer disputes. The seller can also give it instructions in plain English. | `src/lib/agent/` |

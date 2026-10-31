@@ -1,5 +1,9 @@
+import { RESOURCE_MIME_TYPE, registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { and, eq, inArray } from "drizzle-orm";
+import sharp from "sharp";
 import { z } from "zod";
+import { db, schema } from "../db";
 import type { Seller } from "../db/schema";
 import { aiConfigured } from "../ai";
 import { requestRefund } from "../agent/actions";
@@ -17,6 +21,7 @@ import {
   startCheckout,
   usd,
 } from "../shop";
+import { PRODUCT_WIDGET_URI, productWidgetHtml } from "./product-widget";
 
 /**
  * One MCP server per shop. AI assistants connect to /api/mcp/<slug> and can browse,
@@ -62,16 +67,34 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
     },
   );
 
-  server.registerTool(
+  // Hosts that support MCP Apps (Claude, ChatGPT, VS Code…) render these results as product cards
+  // with a Buy with PayPal button; other hosts just read the JSON.
+  const productCards = { ui: { resourceUri: PRODUCT_WIDGET_URI } };
+
+  registerAppResource(
+    server,
+    "Product cards",
+    PRODUCT_WIDGET_URI,
+    { description: `Product cards for ${seller.name} with PayPal checkout` },
+    async () => ({
+      contents: [{ uri: PRODUCT_WIDGET_URI, mimeType: RESOURCE_MIME_TYPE, text: productWidgetHtml() }],
+    }),
+  );
+
+  registerAppTool(
+    server,
     "search_products",
     {
       title: "Search products",
-      description: `Search the ${seller.name} catalog. Leave query empty to list everything. Prices are USD; shipping is a flat ${usd(SHIPPING_CENTS)}.`,
+      description:
+        `Search the ${seller.name} catalog. Leave query empty to list everything. Prices are USD; shipping is a flat ${usd(SHIPPING_CENTS)}. ` +
+        "In apps that support it, results show as product cards with photos and a Buy with PayPal button.",
       inputSchema: {
         query: z.string().optional().describe("Keywords, e.g. 'lavender' or 'gift set'"),
         max_price_usd: z.number().positive().optional().describe("Only products at or under this price"),
       },
       annotations: { readOnlyHint: true },
+      _meta: productCards,
     },
     ({ query, max_price_usd }) =>
       run(async () => {
@@ -83,18 +106,54 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
       }),
   );
 
-  server.registerTool(
+  registerAppTool(
+    server,
     "get_product",
     {
       title: "Get product details",
-      description: "Full details for one product: description, attributes (materials, size, scent), price, stock.",
+      description:
+        "Full details for one product: description, attributes (materials, size, scent), price, stock. " +
+        "In apps that support it, shows a product card with a Buy with PayPal button.",
       inputSchema: { product_id: z.string().describe("Product id from search_products") },
       annotations: { readOnlyHint: true },
+      _meta: productCards,
     },
     ({ product_id }) =>
       run(async () => {
         const product = await getProduct(seller, product_id);
         return product ? ok(publicProduct(product)) : fail(`No product with id ${product_id}.`);
+      }),
+  );
+
+  // Widget-only helper: product photos as small inlined thumbnails (the card's sandbox blocks remote images).
+  registerAppTool(
+    server,
+    "get_product_photos",
+    {
+      title: "Get product photos",
+      description: "Thumbnails for the product cards.",
+      inputSchema: { product_ids: z.array(z.string()).max(12) },
+      annotations: { readOnlyHint: true },
+      _meta: { ui: { resourceUri: PRODUCT_WIDGET_URI, visibility: ["app"] } },
+    },
+    ({ product_ids }) =>
+      run(async () => {
+        const ids = product_ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+        if (!ids.length) return ok({ photos: {} });
+        const rows = await db
+          .select({ id: schema.productImages.productId, data: schema.productImages.data })
+          .from(schema.productImages)
+          .innerJoin(schema.products, eq(schema.products.id, schema.productImages.productId))
+          .where(and(eq(schema.products.sellerId, seller.id), inArray(schema.productImages.productId, ids)));
+        const photos = Object.fromEntries(
+          await Promise.all(
+            rows.map(async (r) => {
+              const thumb = await sharp(r.data).resize(480, 360, { fit: "cover" }).jpeg({ quality: 72 }).toBuffer();
+              return [r.id, `data:image/jpeg;base64,${thumb.toString("base64")}`] as const;
+            }),
+          ),
+        );
+        return ok({ photos });
       }),
   );
 
