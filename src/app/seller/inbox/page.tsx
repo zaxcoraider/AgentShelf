@@ -6,28 +6,20 @@ import { usd } from "@/lib/money";
 import { timeAgo } from "@/lib/seller";
 import { requireSeller } from "@/lib/seller-session";
 import { aiConfigured } from "@/lib/ai";
+import { ACTION_STATUS_LABEL, DISPUTE_REASON, TOOL_LABEL } from "@/lib/labels";
 import { ApprovalButtons, AskAgent, ShipForm } from "./forms";
 import { Arrive, LiveUpdates } from "./live";
 
 // Seller inbox: refunds waiting for approval, paid orders to ship, and everything the agent did.
 export const dynamic = "force-dynamic";
 
-const STATUS_STYLE: Record<AgentAction["status"], { label: string; className: string }> = {
-  auto: { label: "Done by agent", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
-  pending_approval: { label: "Needs you", className: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300" },
-  approved: { label: "Approved", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
-  rejected: { label: "Rejected", className: "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300" },
-  blocked: { label: "Blocked by rule", className: "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300" },
-  failed: { label: "Failed", className: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300" },
-};
-
-const TOOL_LABEL: Record<string, string> = {
-  refund_order: "Refund",
-  add_tracking: "Shipment tracking",
-  create_shipment_tracking: "Shipment tracking",
-  create_refund: "Refund",
-  get_dispute: "Dispute review",
-  review_dispute: "Dispute review",
+const STATUS_CLASS: Record<AgentAction["status"], string> = {
+  auto: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  pending_approval: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
+  approved: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  rejected: "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
+  blocked: "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
+  failed: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
 };
 
 /** Activity log filters: which tools each one shows. */
@@ -39,12 +31,6 @@ const FILTERS = {
 } as const;
 type Filter = keyof typeof FILTERS;
 
-const DISPUTE_REASON: Record<string, string> = {
-  MERCHANDISE_OR_SERVICE_NOT_RECEIVED: "Buyer says it never arrived",
-  MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED: "Buyer says it isn't as described",
-  UNAUTHORISED: "Buyer says they didn't make this payment",
-  DUPLICATE_TRANSACTION: "Buyer says they were charged twice",
-};
 
 /** "Respond in 3 days" countdown; red once two days or less remain. */
 function dueLabel(due: Date | null, now = Date.now()) {
@@ -238,11 +224,13 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
         ) : (
           <ol className="divide-y divide-stone-200 dark:divide-stone-800">
             {activity.map((a) => {
-              const style = STATUS_STYLE[a.status];
+
               return (
                 <Arrive key={a.id} className="py-3">
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${style.className}`}>{style.label}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[a.status]}`}>
+                      {ACTION_STATUS_LABEL[a.status]}
+                    </span>
                     <span className="font-medium">{TOOL_LABEL[a.tool] ?? a.tool}</span>
                     <span className="opacity-60">{timeAgo(a.createdAt)}</span>
                   </div>

@@ -29,6 +29,8 @@
     "@paypal/agent-toolkit": "^1.11.0",
     "@paypal/paypal-server-sdk": "^2.5.0",
     "@paypal/react-paypal-js": "^10.6.1",
+    "ag-studio": "3.0.0",
+    "ag-studio-react": "3.0.0",
     "ai": "^7.0.155",
     "drizzle-orm": "^0.45.4",
     "motion": "^14.9.0",

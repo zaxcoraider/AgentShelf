@@ -68,3 +68,7 @@ next-env.d.ts
 
 # Local embedded database (PGlite)
 .data/
+
+# Coding-agent skills installed locally (AG Grid ag-dev / ag-update)
+.claude/skills/
+skills-lock.json

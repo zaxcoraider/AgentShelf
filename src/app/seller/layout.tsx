@@ -8,6 +8,7 @@ import { SellerNavLinks } from "./nav";
 // Shared shell for the seller's pages: the landing page's candlelit look, always dark.
 const LINKS = [
   { href: "/seller/inbox", label: "Inbox" },
+  { href: "/seller/dashboard", label: "Dashboard" },
   { href: "/seller/listings", label: "Add products" },
   { href: "/seller/ai-view", label: "AI's view" },
   { href: "/seller/connect", label: "Connect your AI" },
@@ -22,7 +23,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
         className="pointer-events-none fixed inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent)]"
       />
       <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-wax/70 backdrop-blur-xl">
-        <nav className="mx-auto flex h-14 max-w-3xl items-center gap-4 px-4 text-sm sm:px-6">
+        <nav className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4 text-sm sm:px-6">
           <Link href="/" aria-label="AgentShelf home" className="shrink-0">
             <Logo size={24} />
           </Link>
