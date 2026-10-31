@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
-export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+const copyStyle =
+  "bg-stone-900 text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-300";
+
+export function CopyButton({ text, label = "Copy", className = copyStyle }: { text: string; label?: string; className?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -12,7 +15,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className="shrink-0 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-300"
+      className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${className}`}
     >
       {copied ? "Copied" : label}
     </button>
