@@ -9,6 +9,7 @@ import { usd } from "./money";
 import { createCatalogProduct } from "./paypal/toolkit";
 import { appUrl } from "./shop";
 import { policyText } from "./shop-facts";
+import { LIMITS } from "./listing-limits";
 
 /**
  * Photo → listing onboarding: a vision model drafts the listing from a product photo,
@@ -22,8 +23,8 @@ export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 export const listingDraft = z.object({
   title: z.string().describe("Short product name, under 60 characters, no emojis"),
   description: z.string().describe("Two or three warm, specific sentences for shoppers. Only claim what the photo or shop policy supports."),
-  scent: z.string().describe("Scent notes, e.g. 'Lavender, chamomile'; 'Unscented' if none"),
-  size: z.string().describe("Size if visible, e.g. '8 oz'; otherwise the shop's usual size"),
+  scent: z.string().describe("Two to four scent notes, comma-separated, e.g. 'Lavender, chamomile'; 'Unscented' if none. Not a sentence."),
+  size: z.string().describe("Size only, e.g. '8 oz'; if not visible, the shop's usual size"),
   suggestedPriceUsd: z.number().describe("Price in USD that fits this shop's existing prices"),
   priceReason: z.string().describe("One sentence on why that price, comparing to the shop's products"),
 });
@@ -69,14 +70,33 @@ export async function draftListing(
   );
   // The model recognises products the shop already sells; flag it rather than publish a duplicate.
   const same = catalog.find((p) => p.title.trim().toLowerCase() === output.title.trim().toLowerCase());
-  return { ...output, suggestedPriceUsd: Math.round(output.suggestedPriceUsd * 100) / 100, alreadySells: same?.title };
+  return {
+    ...output,
+    // Keep drafts within what publishInput accepts, so a chatty model can't produce an unpublishable listing.
+    title: clip(output.title, LIMITS.title),
+    description: clip(output.description, LIMITS.description),
+    scent: clip(output.scent, LIMITS.scent),
+    size: clip(output.size, LIMITS.size),
+    suggestedPriceUsd: Math.round(output.suggestedPriceUsd * 100) / 100,
+    alreadySells: same?.title,
+  };
+}
+
+/** Shorten to `max` characters, preferring the last comma, then a word boundary. */
+function clip(text: string, max: number) {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max + 1);
+  const comma = cut.lastIndexOf(",");
+  const at = comma > max * 0.5 ? comma : cut.lastIndexOf(" ");
+  return (at > max * 0.5 ? cut.slice(0, at) : t.slice(0, max)).replace(/[\s,;.]+$/, "");
 }
 
 export const publishInput = z.object({
-  title: z.string().trim().min(3).max(80),
-  description: z.string().trim().min(10).max(1000),
-  scent: z.string().trim().max(120),
-  size: z.string().trim().max(40),
+  title: z.string().trim().min(3).max(LIMITS.title),
+  description: z.string().trim().min(10).max(LIMITS.description),
+  scent: z.string().trim().max(LIMITS.scent),
+  size: z.string().trim().max(LIMITS.size),
   priceUsd: z.number().min(1).max(10_000),
   stock: z.number().int().min(0).max(10_000),
 });

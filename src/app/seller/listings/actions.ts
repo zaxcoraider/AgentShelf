@@ -41,8 +41,16 @@ export async function publish(form: FormData): Promise<PublishResult> {
     stock: Number(form.get("stock")),
   });
   if (!parsed.success) {
-    const field = parsed.error.issues[0]?.path[0];
-    return { ok: false, message: `Check the ${field === "priceUsd" ? "price" : String(field)}.` };
+    const issue = parsed.error.issues[0];
+    const field = String(issue?.path[0] ?? "listing");
+    const name = { priceUsd: "Price", stock: "Stock", title: "Title", description: "Description", scent: "Scent", size: "Size" }[field] ?? field;
+    const why =
+      issue?.code === "too_big" && issue.type === "string" ? `is too long (max ${issue.maximum} characters)`
+      : issue?.code === "too_small" && issue.type === "string" ? `is too short (at least ${issue.minimum} characters)`
+      : issue?.code === "too_small" ? `must be at least ${issue.minimum}`
+      : issue?.code === "too_big" ? `can be at most ${issue.maximum}`
+      : "needs a valid value";
+    return { ok: false, message: `${name} ${why}.` };
   }
   try {
     const product = await publishListing(seller, parsed.data, await photo(form));

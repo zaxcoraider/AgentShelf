@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LIMITS } from "@/lib/listing-limits";
 import type { ListingDraft } from "@/lib/listings";
 import { draft, publish } from "./actions";
 
@@ -125,10 +126,11 @@ export function Uploader({ enabled, shopUrl }: { enabled: boolean; shopUrl: stri
                 className="space-y-2"
               >
                 <fieldset disabled={item.state === "publishing"} className="space-y-2">
-                  <input name="title" required aria-label="Title" placeholder="Title" defaultValue={item.draft?.title} className={`${input} font-medium`} />
+                  <input name="title" required maxLength={LIMITS.title} aria-label="Title" placeholder="Title" defaultValue={item.draft?.title} className={`${input} font-medium`} />
                   <textarea
                     name="description"
                     required
+                    maxLength={LIMITS.description}
                     rows={3}
                     aria-label="Description"
                     placeholder="Description"
@@ -136,8 +138,8 @@ export function Uploader({ enabled, shopUrl }: { enabled: boolean; shopUrl: stri
                     className={input}
                   />
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <input name="scent" aria-label="Scent" placeholder="Scent" defaultValue={item.draft?.scent} className={input} />
-                    <input name="size" aria-label="Size" placeholder="Size" defaultValue={item.draft?.size} className={input} />
+                    <input name="scent" maxLength={LIMITS.scent} aria-label="Scent" placeholder="Scent" defaultValue={item.draft?.scent} className={input} />
+                    <input name="size" maxLength={LIMITS.size} aria-label="Size" placeholder="Size" defaultValue={item.draft?.size} className={input} />
                     <label className="flex items-center gap-1 text-sm">
                       $
                       <input
