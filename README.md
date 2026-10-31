@@ -95,7 +95,10 @@ flowchart LR
 
 ## Try it
 
-**Hosted demo:** coming soon (Render).
+**Hosted demo:** https://agentshelf-xsh7.onrender.com (Render, PayPal sandbox)
+
+- Demo shop MCP server: `https://agentshelf-xsh7.onrender.com/api/mcp/mayas-candles` (add it as a custom connector in Claude, or any MCP client)
+- For AI assistants: [`/llms.txt`](https://agentshelf-xsh7.onrender.com/llms.txt)
 
 **Connect your AI to the demo shop:** open `/seller/connect` for the MCP URL and setup steps. Then ask your assistant something like:
 

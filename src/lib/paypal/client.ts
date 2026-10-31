@@ -116,6 +116,13 @@ async function accessToken() {
   return token.value;
 }
 
+/** GET a PayPal REST endpoint with our app's token. */
+export async function paypalGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${await accessToken()}` } });
+  if (!res.ok) throw new Error(`PayPal ${path} failed: ${res.status} ${await res.text()}`);
+  return (await res.json()) as T;
+}
+
 /** POST to a PayPal REST endpoint with our app's token. */
 export async function paypalPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

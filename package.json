@@ -18,7 +18,8 @@
     "db:setup": "npm run db:migrate && npm run db:seed",
     "smoke:mcp": "tsx --env-file-if-exists=.env scripts/smoke-mcp.mts",
     "smoke:webhook": "tsx --env-file-if-exists=.env scripts/smoke-webhook.mts",
-    "test": "tsx --test 'src/**/*.test.ts'"
+    "test": "tsx --test 'src/**/*.test.ts'",
+    "paypal:webhook": "tsx --env-file-if-exists=.env scripts/register-webhook.mts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.80",
