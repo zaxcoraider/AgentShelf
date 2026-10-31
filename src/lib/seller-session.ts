@@ -10,9 +10,14 @@ import { SESSION_COOKIE, sellerAuthEnabled, verifySessionToken } from "./session
  * when there's no valid session it redirects to /signin, which works by throwing.
  */
 export async function requireSeller() {
-  if (!sellerAuthEnabled()) return currentSeller();
-  const slug = await verifySessionToken((await cookies()).get(SESSION_COOKIE)?.value);
-  const seller = slug && (await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, slug) }));
+  const seller = await sessionSeller();
   if (!seller) redirect("/signin");
   return seller;
+}
+
+/** The signed-in seller, or null. For route handlers, which answer 401 instead of redirecting. */
+export async function sessionSeller() {
+  if (!sellerAuthEnabled()) return currentSeller();
+  const slug = await verifySessionToken((await cookies()).get(SESSION_COOKIE)?.value);
+  return (slug && (await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, slug) }))) || null;
 }

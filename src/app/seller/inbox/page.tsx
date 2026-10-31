@@ -7,6 +7,7 @@ import { timeAgo } from "@/lib/seller";
 import { requireSeller } from "@/lib/seller-session";
 import { aiConfigured } from "@/lib/ai";
 import { ApprovalButtons, AskAgent, ShipForm } from "./forms";
+import { Arrive, LiveUpdates } from "./live";
 
 // Seller inbox: refunds waiting for approval, paid orders to ship, and everything the agent did.
 export const dynamic = "force-dynamic";
@@ -119,7 +120,10 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <p className="text-sm opacity-60">{seller.name}</p>
-      <h1 className="text-3xl font-semibold tracking-tight">Inbox</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight">Inbox</h1>
+        <LiveUpdates />
+      </div>
       <p className="mt-1 text-sm opacity-70">
         Your agent refunds up to {usd(seller.refundAutoLimitCents)} on its own. Anything larger waits here for you.
       </p>
@@ -136,7 +140,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
             {pending.map((a) => {
               const amount = usd(Number((a.input as { amountCents?: number } | null)?.amountCents ?? 0));
               return (
-                <li key={a.id} className="rounded-xl border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+                <Arrive key={a.id} className="rounded-xl border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
                   <p className="font-medium">
                     {TOOL_LABEL[a.tool] ?? a.tool} of {amount}
                   </p>
@@ -148,7 +152,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
                   <div className="mt-3">
                     <ApprovalButtons actionId={a.id} amount={amount} />
                   </div>
-                </li>
+                </Arrive>
               );
             })}
           </ul>
@@ -163,7 +167,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
             {openDisputes.map(({ dispute: d, order: o }) => {
               const due = dueLabel(d.responseDueAt);
               return (
-                <li key={d.id} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
+                <Arrive key={d.id} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium">
                       {DISPUTE_REASON[d.reason ?? ""] ?? "Buyer opened a dispute"}
@@ -189,7 +193,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
                   <p className="mt-2 text-xs opacity-60">
                     PayPal case {d.paypalDisputeId}. Refunds on this order are paused until it&apos;s resolved.
                   </p>
-                </li>
+                </Arrive>
               );
             })}
           </ul>
@@ -202,11 +206,11 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
         ) : (
           <ul className="space-y-3">
             {toShip.map((o) => (
-              <li key={o.id} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
+              <Arrive key={o.id} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
                 <p className="font-medium">{describeOrder(o.id)}</p>
                 <p className="mb-3 text-sm opacity-60">Paid {timeAgo(o.createdAt)}</p>
                 <ShipForm orderId={o.id} />
-              </li>
+              </Arrive>
             ))}
           </ul>
         )}
@@ -236,7 +240,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
             {activity.map((a) => {
               const style = STATUS_STYLE[a.status];
               return (
-                <li key={a.id} className="py-3">
+                <Arrive key={a.id} className="py-3">
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${style.className}`}>{style.label}</span>
                     <span className="font-medium">{TOOL_LABEL[a.tool] ?? a.tool}</span>
@@ -244,7 +248,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
                   </div>
                   <p className="mt-1 text-sm opacity-70">{describeOrder(a.orderId)}</p>
                   {a.reason && <p className="mt-1 text-sm">{a.reason}</p>}
-                </li>
+                </Arrive>
               );
             })}
           </ol>
