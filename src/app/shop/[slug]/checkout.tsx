@@ -28,6 +28,21 @@ export function CheckoutProvider({ clientId, children }: { clientId: string; chi
 
 const MAX_QUANTITY = 5;
 
+/** A Buy button that opens this product's PayPal options, so the page doesn't load buttons for every product. */
+export function BuyToggle(props: Parameters<typeof BuyButtons>[0] & { price: string }) {
+  const [open, setOpen] = useState(false);
+  if (open) return <BuyButtons {...props} />;
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="mt-4 w-full rounded-full bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-700 active:scale-[0.99]"
+    >
+      Buy for {props.price}
+    </button>
+  );
+}
+
 /** Quantity picker plus every PayPal payment method this buyer is eligible for. */
 export function BuyButtons(props: {
   slug: string;
@@ -68,22 +83,26 @@ export function BuyButtons(props: {
           <select
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
-            className="rounded border border-stone-300 bg-transparent px-2 py-1 dark:border-stone-700"
+            className="rounded-md border border-stone-300 bg-white px-2 py-1"
           >
             {Array.from({ length: Math.min(MAX_QUANTITY, props.stock) }, (_, i) => i + 1).map((n) => (
               <option key={n}>{n}</option>
             ))}
           </select>
         </label>
-        <span>
-          {usd(totalCents)} <span className="opacity-60">incl. {usd(props.shippingCents)} shipping</span>
+        <span className="text-right">
+          <span className="font-semibold">{usd(totalCents)}</span>{" "}
+          <span className="text-stone-500">incl. {usd(props.shippingCents)} shipping</span>
         </span>
       </div>
-      <PayPalOneTimePaymentButton {...session} />
-      {eligiblePaymentMethods?.isEligible("venmo") && <VenmoOneTimePaymentButton {...session} />}
-      {eligiblePaymentMethods?.isEligible("paylater") && <PayLaterOneTimePaymentButton {...session} />}
+      {/* PayPal's buttons are custom elements; stretch them to the card's width. */}
+      <div className="space-y-2 [&>*]:block [&>*]:w-full">
+        <PayPalOneTimePaymentButton {...session} />
+        {eligiblePaymentMethods?.isEligible("venmo") && <VenmoOneTimePaymentButton {...session} />}
+        {eligiblePaymentMethods?.isEligible("paylater") && <PayLaterOneTimePaymentButton {...session} />}
+      </div>
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm text-red-700">
           {error}
         </p>
       )}

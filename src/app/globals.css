@@ -1,9 +1,11 @@
 @import "tailwindcss";
 
-/* dark: follows the OS, and is forced inside .dark (the candlelit seller app). */
+/* dark: follows the OS, is forced inside .dark (the candlelit seller app), and is off inside .light (the storefront). */
 @custom-variant dark {
   @media (prefers-color-scheme: dark) {
-    @slot;
+    &:not(:where(.light, .light *)) {
+      @slot;
+    }
   }
   &:where(.dark, .dark *) {
     @slot;
