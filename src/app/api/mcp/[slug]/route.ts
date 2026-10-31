@@ -28,4 +28,12 @@ async function handle(request: Request, { params }: { params: Promise<{ slug: st
   return transport.handleRequest(request);
 }
 
-export { handle as GET, handle as POST, handle as DELETE };
+// Stateless JSON server: no standalone SSE stream to open and no session to end, so GET and DELETE
+// get 405 as the spec allows. (A held-open GET stalls clients like mcp-remote.)
+const notAllowed = () =>
+  Response.json(
+    { jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed." }, id: null },
+    { status: 405, headers: { Allow: "POST" } },
+  );
+
+export { handle as POST, notAllowed as GET, notAllowed as DELETE };
