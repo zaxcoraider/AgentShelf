@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 const TOOLS = [
   ["Search products", "Finds items by keywords and price."],
   ["Get product details", "Materials, size, scent, price, and stock."],
+  ["Get shop policy", "Where you ship, delivery times, returns, and materials."],
   ["Ask the seller", "Answers shopper questions from your shop policy."],
   ["Create checkout", "Makes a PayPal order and hands the buyer a link to approve."],
   ["Get order status", "Payment and shipping status, with tracking."],

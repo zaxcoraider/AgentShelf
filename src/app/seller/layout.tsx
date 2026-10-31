@@ -8,6 +8,7 @@ import { sellerAuthEnabled } from "@/lib/session";
 const LINKS = [
   { href: "/seller/inbox", label: "Inbox" },
   { href: "/seller/listings", label: "Add products" },
+  { href: "/seller/ai-view", label: "AI's view" },
   { href: "/seller/connect", label: "Connect your AI" },
   { href: `/shop/${DEMO_SELLER_SLUG}`, label: "Storefront" },
 ];
