@@ -6,6 +6,7 @@ import { requestBaseUrl } from "@/lib/base-url";
 import { db, schema } from "@/lib/db";
 import { usd } from "@/lib/money";
 import { DEMO_SELLER_SLUG } from "@/lib/seller";
+import { policyLines, shopPolicy } from "@/lib/shop-facts";
 import { type Activity, Bento } from "./_landing/bento";
 import { CountUp } from "./_landing/count-up";
 import { HeroChat } from "./_landing/hero-chat";
@@ -110,11 +111,12 @@ export default async function Home() {
     imageUrl: star.imageUrl,
     details: [attrs.size, attrs.burnTime && `${attrs.burnTime} burn`].filter(Boolean).join(", "),
   };
-  const waxLine = seller.policy?.split("\n").find((line) => /wax/i.test(line));
+  // Grounded in the shop's own facts: the product's attributes first, then the shop's materials policy.
+  const materials = (shopPolicy(seller)?.materials ?? policyLines(seller).find((line) => /wax/i.test(line)))?.split(". ")[0];
   const waxAnswer = attrs.wax
     ? `Yes, it's ${attrs.wax.toLowerCase()} wax${attrs.wick ? ` with a ${attrs.wick} wick` : ""}.`
-    : waxLine
-      ? `${/soy/i.test(waxLine) ? "Yes. " : ""}${waxLine}`
+    : materials
+      ? `${/soy/i.test(materials) ? "Yes: " : ""}${materials.replace(/\.$/, "")}.`
       : "I'll check with the seller and get back to you.";
 
   // A mix of the agent's work: the newest action of each kind first, then the newest overall.
@@ -383,6 +385,7 @@ export default async function Home() {
             title="Build"
             links={[
               ["Connect your AI", "/seller/connect"],
+              ["llms.txt for AI assistants", "/llms.txt"],
               ["Source on GitHub", "https://github.com/zaxcoraider/AgentShelf"],
             ]}
           />

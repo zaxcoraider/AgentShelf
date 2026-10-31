@@ -5,6 +5,7 @@ import { db, schema } from "./db";
 import type { Order, Product, Seller } from "./db/schema";
 import { usd } from "./money";
 import { captureOrder, createOrder, getOrderPayment, type CheckoutChannel } from "./paypal/client";
+import { policyText } from "./shop-facts";
 
 export { usd };
 
@@ -13,7 +14,10 @@ export { usd };
  * catalog search, seller Q&A, checkout via PayPal Orders, and capture on return.
  */
 
+/** Flat shipping when a shop has no structured policy yet. */
 export const SHIPPING_CENTS = 595;
+
+export const shippingCents = (seller: Seller) => seller.shopPolicy?.shippingCents ?? SHIPPING_CENTS;
 export const MAX_QUANTITY = 5;
 
 // Render sets RENDER_EXTERNAL_URL, so APP_URL only needs setting for a custom domain.
@@ -77,7 +81,7 @@ export async function getProduct(seller: Seller, productId: string) {
 export async function askSeller(seller: Seller, question: string, product?: Product) {
   const facts = [
     `Shop: ${seller.name}. ${seller.tagline ?? ""}`,
-    `Shop policy:\n${seller.policy ?? "No policy written yet."}`,
+    `Shop policy:\n${policyText(seller)}`,
     product && `Product: ${product.title} (${usd(product.priceCents)}). ${product.description}`,
     product && `Attributes: ${JSON.stringify(product.attributes)}`,
   ]
@@ -91,7 +95,8 @@ export async function askSeller(seller: Seller, question: string, product?: Prod
       model,
       system:
         `You answer shopper questions for ${seller.name}, a small independent shop. ` +
-        "Use only the facts provided. If the facts don't cover it, say you're not sure and suggest asking the seller directly. " +
+        "Use only the facts provided. If the policy says the shop doesn't do something (for example a country it doesn't ship to), say no plainly. " +
+        "If the facts don't cover it, say you're not sure and suggest asking the seller directly. Never guess. " +
         "Two or three sentences, friendly, no markdown.",
       prompt: `${facts}\n\nShopper question: ${question}`,
     }),
@@ -113,7 +118,7 @@ export async function startCheckout(
     throw new ShopError(`Only ${product.stock} of "${product.title}" left in stock.`);
   }
 
-  const amountCents = product.priceCents * opts.quantity + SHIPPING_CENTS;
+  const amountCents = product.priceCents * opts.quantity + shippingCents(seller);
   const paypal = await createOrder({
     amountCents,
     description: `${seller.name}: ${product.title} x${opts.quantity}`,
@@ -144,7 +149,7 @@ export async function startCheckout(
     product: product.title,
     quantity: opts.quantity,
     subtotal: usd(product.priceCents * opts.quantity),
-    shipping: usd(SHIPPING_CENTS),
+    shipping: usd(shippingCents(seller)),
     total: usd(amountCents),
     approveUrl: paypal.approveUrl,
   };

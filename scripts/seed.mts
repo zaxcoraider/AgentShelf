@@ -31,13 +31,20 @@ const [seller] = await db
     tagline: "Hand-poured soy candles from a small studio in Portland, Oregon",
     ownerName: "Maya",
     refundAutoLimitCents: 3000,
-    policy: [
-      "All candles are hand-poured in small batches with 100% soy wax and cotton wicks.",
-      "Fragrances are phthalate-free. No paraffin, no dyes in the natural line.",
-      "Orders ship within 2 business days from Portland, OR via USPS Ground Advantage (3-5 days).",
-      "Returns: unused candles within 30 days. Damaged in transit: full refund, no return needed.",
-      "Custom scents and wedding favors available for orders of 20+; ask for an invoice.",
-    ].join("\n"),
+    shopPolicy: {
+      shipsFrom: "Portland, Oregon, USA",
+      shipsTo: ["US"],
+      processingDays: { min: 1, max: 2 },
+      carrier: "USPS Ground Advantage",
+      transitDays: { min: 3, max: 5 },
+      shippingCents: 595,
+      returnsDays: 30,
+      returnsCondition: "the candle is unused",
+      returnShippingPaidBy: "buyer",
+      damaged: "full refund, no return needed. Send a photo of the damage.",
+      materials: "100% soy wax, cotton wicks, phthalate-free fragrances. No paraffin. No dyes in the natural line.",
+      customOrders: "custom scents and wedding favors for orders of 20 or more; ask for an invoice.",
+    },
   })
   .returning();
 

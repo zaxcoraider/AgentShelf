@@ -39,6 +39,31 @@ const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 };
 
+/** A shop's promises as structured fields; see src/lib/shop-facts.ts. */
+export type ShopPolicy = {
+  /** City, region, country the orders ship from, e.g. "Portland, Oregon, USA". */
+  shipsFrom: string;
+  /** ISO 3166-1 alpha-2 codes. Anything not listed is not shipped to. */
+  shipsTo: string[];
+  /** Business days from order to hand-off to the carrier. */
+  processingDays: { min: number; max: number };
+  carrier: string;
+  /** Business days in transit once shipped. */
+  transitDays: { min: number; max: number };
+  /** Flat shipping per order, in cents. */
+  shippingCents: number;
+  /** Days after delivery a return is accepted; 0 means no returns. */
+  returnsDays: number;
+  /** What a returnable item must be like, e.g. "unused, in original packaging". */
+  returnsCondition: string;
+  /** Who pays for return shipping. */
+  returnShippingPaidBy: "buyer" | "seller";
+  /** What happens when an item arrives damaged. */
+  damaged: string;
+  materials: string;
+  customOrders: string | null;
+};
+
 export const sellers = pgTable("sellers", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
@@ -47,7 +72,9 @@ export const sellers = pgTable("sellers", {
   ownerName: text("owner_name"),
   /** Refunds at or under this amount run automatically; above it they wait for approval. */
   refundAutoLimitCents: integer("refund_auto_limit_cents").notNull().default(3000),
-  /** Free-text policy the agent and `ask_seller` read (shipping times, returns, materials). */
+  /** Structured shipping/returns/materials facts: the source of truth for humans and AI alike. */
+  shopPolicy: jsonb("shop_policy").$type<ShopPolicy>(),
+  /** Extra free-text notes, appended after the structured policy. */
   policy: text("policy"),
   ...timestamps,
 });

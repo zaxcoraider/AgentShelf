@@ -8,6 +8,7 @@ import { usd } from "../money";
 import { CARRIERS, type Carrier } from "../paypal/client";
 import { paypalTools } from "../paypal/toolkit";
 import { findOrder } from "../shop";
+import { policyText } from "../shop-facts";
 import { markShipped, recordDisputeReview, requestRefund, type ActionResult } from "./actions";
 import { DAILY_AUTO_REFUND_CAP_CENTS } from "./guardrails";
 
@@ -27,7 +28,7 @@ function systemPrompt(seller: Seller) {
     `Today is ${new Date().toISOString().slice(0, 10)}.`,
     "",
     "Shop policy (the source of truth for every decision):",
-    seller.policy ?? "No policy written yet. When in doubt, escalate to the seller.",
+    seller.shopPolicy || seller.policy ? policyText(seller) : "No policy written yet. When in doubt, escalate to the seller.",
     "",
     "Your rules:",
     `- Refunds: refund_order runs automatically up to ${usd(seller.refundAutoLimitCents)} per refund and ${usd(DAILY_AUTO_REFUND_CAP_CENTS)} per day; larger ones go to ${owner} for approval. The tool enforces this, so just call it when the policy supports a refund.`,

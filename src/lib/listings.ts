@@ -8,6 +8,7 @@ import type { Seller } from "./db/schema";
 import { usd } from "./money";
 import { createCatalogProduct } from "./paypal/toolkit";
 import { appUrl } from "./shop";
+import { policyText } from "./shop-facts";
 
 /**
  * Photo → listing onboarding: a vision model drafts the listing from a product photo,
@@ -43,7 +44,7 @@ export async function draftListing(
   const catalog = await db.query.products.findMany({ where: eq(schema.products.sellerId, seller.id) });
   const context = [
     `Shop: ${seller.name}. ${seller.tagline ?? ""}`,
-    `Shop policy:\n${seller.policy ?? "(none)"}`,
+    `Shop policy:\n${policyText(seller)}`,
     "Current products and prices:",
     ...catalog.map((p) => `- ${p.title}: ${usd(p.priceCents)} (${p.attributes.size ?? "?"})`),
   ].join("\n");

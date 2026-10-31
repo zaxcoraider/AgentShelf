@@ -29,6 +29,13 @@
       "when": 1793363231764,
       "tag": "0003_product_images",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793427760188,
+      "tag": "0004_shop_policy",
+      "breakpoints": true
     }
   ]
 }

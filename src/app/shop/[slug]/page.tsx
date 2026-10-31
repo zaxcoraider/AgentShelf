@@ -1,7 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/lib/db";
-import { getShop, SHIPPING_CENTS, usd } from "@/lib/shop";
+import { requestBaseUrl } from "@/lib/base-url";
+import { getShop, shippingCents, usd } from "@/lib/shop";
+import { policyLines, productJsonLd } from "@/lib/shop-facts";
 import { BuyButtons, CheckoutProvider } from "./checkout";
 
 // Public storefront for human buyers. AI buyers use the same catalog through /api/mcp/<slug>.
@@ -17,9 +19,23 @@ export default async function Storefront({ params }: { params: Promise<{ slug: s
     orderBy: asc(schema.products.priceCents),
   });
   const clientId = process.env.PAYPAL_CLIENT_ID;
+  const baseUrl = await requestBaseUrl();
+  // Same facts the MCP server gives assistants, as schema.org data for crawlers and AI browsing.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: seller.name,
+    itemListElement: products.map((p, i) => ({ "@type": "ListItem", position: i + 1, item: productJsonLd(seller, p, baseUrl) })),
+  };
+  const policy = policyLines(seller);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <script
+        type="application/ld+json"
+        // JSON.stringify output with "<" escaped can't break out of the script tag.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">{seller.name}</h1>
         <p className="mt-1 opacity-70">{seller.tagline}</p>
@@ -54,7 +70,7 @@ export default async function Storefront({ params }: { params: Promise<{ slug: s
                   slug={seller.slug}
                   productId={p.id}
                   priceCents={p.priceCents}
-                  shippingCents={SHIPPING_CENTS}
+                  shippingCents={shippingCents(seller)}
                   stock={p.stock}
                 />
               ) : (
@@ -64,6 +80,20 @@ export default async function Storefront({ params }: { params: Promise<{ slug: s
           ))}
         </ul>
       </CheckoutProvider>
+
+      {policy.length > 0 && (
+        <section aria-labelledby="policy" className="mt-12 rounded-xl border border-stone-200 p-5 dark:border-stone-800">
+          <h2 id="policy" className="font-medium">
+            Shipping, returns, and materials
+          </h2>
+          <ul className="mt-3 space-y-1.5 text-sm opacity-80">
+            {policy.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs opacity-60">AI assistants connected to this shop get exactly these facts.</p>
+        </section>
+      )}
     </main>
   );
 }

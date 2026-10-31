@@ -16,11 +16,12 @@ import {
   orderStatus,
   publicProduct,
   searchProducts,
-  SHIPPING_CENTS,
+  shippingCents,
   ShopError,
   startCheckout,
   usd,
 } from "../shop";
+import { publicPolicy } from "../shop-facts";
 import { PRODUCT_WIDGET_URI, productWidgetHtml } from "./product-widget";
 
 /**
@@ -60,7 +61,8 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
     {
       instructions:
         `${seller.name}: ${seller.tagline ?? "an independent shop"}. ` +
-        "Use search_products to browse, ask_seller for questions the listing doesn't answer, " +
+        "Use search_products to browse, get_shop_policy for shipping, returns, and materials (never assume these), " +
+        "ask_seller for questions the listing and policy don't answer, " +
         "and create_checkout to buy. Checkout returns a PayPal link: always show it to the user, " +
         "who must approve the payment themselves. Never claim an order is paid until get_order_status says so. " +
         "If something went wrong with an order, use request_refund with the email the buyer paid with.",
@@ -87,7 +89,7 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
     {
       title: "Search products",
       description:
-        `Search the ${seller.name} catalog. Leave query empty to list everything. Prices are USD; shipping is a flat ${usd(SHIPPING_CENTS)}. ` +
+        `Search the ${seller.name} catalog. Leave query empty to list everything. Prices are USD; shipping is a flat ${usd(shippingCents(seller))}. ` +
         "In apps that support it, results show as product cards with photos and a Buy with PayPal button.",
       inputSchema: {
         query: z.string().optional().describe("Keywords, e.g. 'lavender' or 'gift set'"),
@@ -155,6 +157,19 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
         );
         return ok({ photos });
       }),
+  );
+
+  server.registerTool(
+    "get_shop_policy",
+    {
+      title: "Get shop policy",
+      description:
+        `${seller.name}'s shipping (where from, which countries, how long, cost), returns, damage policy, and materials. ` +
+        "The seller's own facts: answer from these instead of assuming. If a country isn't listed, the shop doesn't ship there.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    () => run(async () => ok(publicPolicy(seller))),
   );
 
   server.registerTool(
