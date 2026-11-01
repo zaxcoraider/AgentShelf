@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/app/signin/actions";
 import { Logo } from "@/components/logo";
 import { DEMO_SELLER_SLUG } from "@/lib/seller";
+import { sessionSeller } from "@/lib/seller-session";
 import { sellerAuthEnabled } from "@/lib/session";
 import { SellerNavLinks } from "./nav";
 
@@ -14,7 +15,8 @@ const LINKS = [
   { href: "/seller/connect", label: "Connect your AI" },
 ];
 
-export default function SellerLayout({ children }: { children: React.ReactNode }) {
+export default async function SellerLayout({ children }: { children: React.ReactNode }) {
+  const seller = await sessionSeller();
   return (
     <div className="dark min-h-screen bg-wax text-cream [color-scheme:dark] selection:bg-ember/40">
       {/* A low, warm light at the top of every page, like the landing hero. */}
@@ -29,10 +31,10 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
           </Link>
           <SellerNavLinks links={LINKS} />
           <div className="ml-auto flex shrink-0 items-center gap-4 text-smoke">
-            <Link href={`/shop/${DEMO_SELLER_SLUG}`} className="hidden transition-colors hover:text-cream sm:block">
+            <Link href={`/shop/${seller?.slug ?? DEMO_SELLER_SLUG}`} className="hidden transition-colors hover:text-cream sm:block">
               Storefront
             </Link>
-            {sellerAuthEnabled() && (
+            {(sellerAuthEnabled() || seller?.visitor) && (
               <form action={signOut}>
                 <button className="transition-colors hover:text-cream">Sign out</button>
               </form>

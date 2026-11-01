@@ -65,7 +65,7 @@ export default async function AiView() {
         <h2 className="text-lg font-semibold">Ask like a shopper</h2>
         <p className="mt-1 text-sm opacity-70">The answer an assistant gets from your shop, live.</p>
         <div className="mt-4">
-          <AskBox />
+          <AskBox candles={!seller.visitor} />
         </div>
       </section>
 

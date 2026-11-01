@@ -87,7 +87,9 @@ export default async function Connect() {
     },
   ];
 
-  const tryPrompt = `I'm looking for a cozy candle under $30 as a gift from ${seller.name}. What do you recommend? Ask the seller if it's soy wax, then check out the best one for me.`;
+  const tryPrompt = seller.visitor
+    ? `I'm looking for a gift under $30 from ${seller.name}. What do you recommend? Ask the seller what it's made of and whether they ship to me, then check out the best one for me.`
+    : `I'm looking for a cozy candle under $30 as a gift from ${seller.name}. What do you recommend? Ask the seller if it's soy wax, then check out the best one for me.`;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">

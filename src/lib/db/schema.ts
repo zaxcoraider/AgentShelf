@@ -76,6 +76,17 @@ export const sellers = pgTable("sellers", {
   shopPolicy: jsonb("shop_policy").$type<ShopPolicy>(),
   /** Extra free-text notes, appended after the structured policy. */
   policy: text("policy"),
+  /**
+   * Shops made by visitors on /start (judges trying AgentShelf). They sign in with their own
+   * password, share the platform's sandbox PayPal account, and are deleted at `expiresAt`.
+   * The seeded showcase shop (Maya's) has visitor=false and signs in with SELLER_DEMO_PASSWORD.
+   */
+  visitor: boolean("visitor").notNull().default(false),
+  /** scrypt hash ("scrypt$salt$hash") of a visitor shop's password. */
+  passwordHash: text("password_hash"),
+  /** Salted hash of the creator's IP, only to rate-limit shop creation. */
+  creatorKey: text("creator_key"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   ...timestamps,
 });
 

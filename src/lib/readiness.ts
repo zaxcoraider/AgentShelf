@@ -43,8 +43,10 @@ function productIssues(product: Product): Issue[] {
   if (words < 8) issues.push({ level: "fix", text: "Description is too short for an assistant to describe it." });
   else if (words < 20) issues.push({ level: "tip", text: "A longer description (20+ words) gives assistants more to work with." });
   if (!a.size) issues.push({ level: "fix", text: "No size listed: \"how big is it?\" has no answer." });
-  if (!a.scent) issues.push({ level: "tip", text: "No scent notes listed." });
-  if (!a.burnTime) issues.push({ level: "tip", text: "No burn time listed." });
+  // Candle-specific tips only for candles (anything that already lists a scent or burn time, or says "candle").
+  const candle = Boolean(a.scent || a.burnTime) || /candle/i.test(product.title);
+  if (candle && !a.scent) issues.push({ level: "tip", text: "No scent notes listed." });
+  if (candle && !a.burnTime) issues.push({ level: "tip", text: "No burn time listed." });
   if (!product.imageUrl) issues.push({ level: "tip", text: "No photo: product cards in Claude and ChatGPT show a placeholder." });
   if (product.stock <= 0) issues.push({ level: "tip", text: "Sold out: assistants will say so and won't check out." });
   return issues;

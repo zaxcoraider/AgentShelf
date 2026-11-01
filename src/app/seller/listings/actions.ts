@@ -1,5 +1,9 @@
 "use server";
 
+import { count, eq } from "drizzle-orm";
+import { START_LIMITS } from "@/app/start/options";
+import { db, schema } from "@/lib/db";
+
 import { revalidatePath } from "next/cache";
 import { aiConfigured } from "@/lib/ai";
 import { draftListing, ListingError, publishInput, publishListing, type ListingDraft } from "@/lib/listings";
@@ -43,7 +47,7 @@ export async function publish(form: FormData): Promise<PublishResult> {
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = String(issue?.path[0] ?? "listing");
-    const name = { priceUsd: "Price", stock: "Stock", title: "Title", description: "Description", scent: "Scent", size: "Size" }[field] ?? field;
+    const name = { priceUsd: "Price", stock: "Stock", title: "Title", description: "Description", scent: "Scent or key details", size: "Size" }[field] ?? field;
     const why =
       issue?.code === "too_big" && issue.type === "string" ? `is too long (max ${issue.maximum} characters)`
       : issue?.code === "too_small" && issue.type === "string" ? `is too short (at least ${issue.minimum} characters)`
@@ -51,6 +55,12 @@ export async function publish(form: FormData): Promise<PublishResult> {
       : issue?.code === "too_big" ? `can be at most ${issue.maximum}`
       : "needs a valid value";
     return { ok: false, message: `${name} ${why}.` };
+  }
+  if (seller.visitor) {
+    const [{ n }] = await db.select({ n: count() }).from(schema.products).where(eq(schema.products.sellerId, seller.id));
+    if (n >= START_LIMITS.maxProducts) {
+      return { ok: false, message: `Demo shops can list up to ${START_LIMITS.maxProducts} products.` };
+    }
   }
   try {
     const product = await publishListing(seller, parsed.data, await photo(form));

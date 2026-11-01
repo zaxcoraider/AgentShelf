@@ -138,7 +138,7 @@ export function Uploader({ enabled, shopUrl }: { enabled: boolean; shopUrl: stri
                     className={input}
                   />
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <input name="scent" maxLength={LIMITS.scent} aria-label="Scent" placeholder="Scent" defaultValue={item.draft?.scent} className={input} />
+                    <input name="scent" maxLength={LIMITS.scent} aria-label="Scent or key details" placeholder="Scent or key details" defaultValue={item.draft?.scent} className={input} />
                     <input name="size" maxLength={LIMITS.size} aria-label="Size" placeholder="Size" defaultValue={item.draft?.size} className={input} />
                     <label className="flex items-center gap-1 text-sm">
                       $

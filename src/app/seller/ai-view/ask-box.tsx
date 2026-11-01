@@ -3,10 +3,12 @@
 import { useActionState, useRef } from "react";
 import { askAsShopper, type AskState } from "./actions";
 
-const SUGGESTIONS = ["Do you ship to Canada?", "Is the wax paraffin?", "Can I return a candle I already burned?", "Do you offer gift wrapping?"];
+const CANDLE_SUGGESTIONS = ["Do you ship to Canada?", "Is the wax paraffin?", "Can I return a candle I already burned?", "Do you offer gift wrapping?"];
+const GENERAL_SUGGESTIONS = ["Do you ship to Canada?", "What is it made of?", "Can I return it if I change my mind?", "Do you offer gift wrapping?"];
 
 /** Try the shop the way a shopper's assistant would, and see the exact answer it gets. */
-export function AskBox() {
+export function AskBox({ candles = false }: { candles?: boolean }) {
+  const SUGGESTIONS = candles ? CANDLE_SUGGESTIONS : GENERAL_SUGGESTIONS;
   const [state, action, pending] = useActionState<AskState, FormData>(askAsShopper, null);
   const input = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);

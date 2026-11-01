@@ -17,7 +17,9 @@ export async function requireSeller() {
 
 /** The signed-in seller, or null. For route handlers, which answer 401 instead of redirecting. */
 export async function sessionSeller() {
-  if (!sellerAuthEnabled()) return currentSeller();
   const slug = await verifySessionToken((await cookies()).get(SESSION_COOKIE)?.value);
-  return (slug && (await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, slug) }))) || null;
+  const seller = slug ? await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, slug) }) : undefined;
+  if (seller && !(seller.expiresAt && seller.expiresAt.getTime() < Date.now())) return seller;
+  // Local runs without a demo password: the seller pages are open and show the showcase shop.
+  return sellerAuthEnabled() ? null : currentSeller();
 }

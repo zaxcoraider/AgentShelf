@@ -23,6 +23,7 @@ Built for [Build What's Next with PayPal and AI](https://paypalaihackathon.devpo
 | 📊 | **Seller dashboard (AG Studio).** Net sales, order count, the share bought by AI assistants, open disputes, daily sales split by AI vs storefront, sales by assistant and by product, the agent's actions, and every order, all cross-filterable and editable in AG Studio's drag-and-drop editor. Updates live as orders and agent actions come in. | `/seller/dashboard` |
 | ⏱️ | **Custom AG Studio widgets.** A **dispute countdown** (every open PayPal dispute, soonest deadline first, ticking live, with the agent's recommendation) and a **live seller-agent feed** (refunds, tracking and dispute reviews as they happen, with done / needs you / blocked outcomes). Both query through Studio's data engine, so page filters and cross filters apply to them like any built-in chart. | `src/app/seller/dashboard/widgets.tsx` |
 | 🧠 | **Our PayPal agent inside AG Studio's Agent Framework.** "Ask AI" opens Studio's chat with our own team: a lead (Studio's built-in lead, extended) that delegates dashboard work to Studio's planning, data, page and widget agents and shop questions to **our PayPal seller agent**. That agent has custom tools (`api.defineAiTool`): `shop_briefing` (disputes by deadline, approvals waiting, orders to ship, refund headroom), `agent_activity`, `find_orders`, and `check_refund`, a dry run of the refund guardrails ("would this refund be automatic, need approval, or be blocked, and why?"). A custom `AgLlmAdapter` streams every turn through our server to Nebius, so no AI key reaches the browser. | `src/app/seller/dashboard/studio-ai.ts`, `src/app/api/seller/studio/` |
+| 🏪 | **Create your own shop.** Anyone can open a shop in about a minute: structured shop facts, optional sample products, and a password (scrypt-hashed). Each shop gets its own storefront, MCP server, seller agent, Inbox and AG Studio dashboard, all scoped to that shop. Rate-limited, product-capped, auto-deleted after 30 days. | `/start` |
 | 👀 | **Your shop through AI's eyes.** An AI-readiness score that flags facts an assistant would have to guess (no size, no shipping countries), the exact data assistants receive, and a box to ask the shop questions like a shopper would. | `/seller/ai-view` |
 | 🔔 | **Webhooks.** Verified PayPal webhooks keep orders, refunds, and disputes in sync, even when the buyer closes the tab before returning, or the seller refunds in PayPal directly. | `/api/webhooks/paypal` |
 
@@ -105,13 +106,15 @@ flowchart LR
 - Demo shop MCP server: `https://agentshelf-xsh7.onrender.com/api/mcp/mayas-candles` (add it as a custom connector in Claude, or any MCP client)
 - For AI assistants: [`/llms.txt`](https://agentshelf-xsh7.onrender.com/llms.txt)
 
+**Create your own shop** at [`/start`](https://agentshelf-xsh7.onrender.com/start): name it, pick the facts assistants will quote (where you ship, returns, materials), choose a password, and optionally start with three sample products. In about a minute you get your own storefront, your own MCP server, a seller agent, and the AG Studio dashboard. Demo shops run in the PayPal sandbox, share AgentShelf's sandbox business account for payments, and are deleted after 30 days.
+
 **Connect your AI to the demo shop:** open `/seller/connect` for the MCP URL and setup steps. Then ask your assistant something like:
 
 > I'm looking for a cozy candle under $30 as a gift from Maya's Candles. Ask the seller if it's soy wax, then check out the best one for me.
 
 The assistant returns a PayPal link; approve it with a PayPal **sandbox** buyer account (login details are in the Devpost submission).
 
-**Seller side** (`/seller/*`: Inbox, Dashboard, Add products, AI's view, Connect your AI) asks for the demo password, also in the Devpost submission. Locally, leave `SELLER_DEMO_PASSWORD` empty and it opens without one.
+**Seller side** (`/seller/*`: Inbox, Dashboard, Add products, AI's view, Connect your AI): sign in to Maya's Candles with the demo password (also in the Devpost submission), or to a shop you created with its own password. Locally, leave `SELLER_DEMO_PASSWORD` empty and it opens without one.
 
 ## Run it locally
 

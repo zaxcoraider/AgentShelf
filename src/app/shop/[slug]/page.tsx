@@ -39,6 +39,7 @@ export default async function Storefront({ params }: { params: Promise<{ slug: s
   const facts = p
     ? [
         `Ships in ${p.processingDays.min === p.processingDays.max ? p.processingDays.max : `${p.processingDays.min}–${p.processingDays.max}`} business days`,
+        ...(p.shippingCents === 0 ? ["Free shipping"] : []),
         p.returnsDays > 0 ? `${p.returnsDays}-day returns` : "Final sale",
         "Pay with PayPal",
       ]

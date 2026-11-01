@@ -165,8 +165,11 @@ export default async function Home() {
             <Link href="/seller/inbox" className="hidden text-smoke transition hover:text-cream sm:block">
               Sign in
             </Link>
-            <Link href={`/shop/${seller.slug}`} className="rounded-full bg-cream px-4 py-1.5 font-medium text-wax transition hover:bg-white">
+            <Link href={`/shop/${seller.slug}`} className="hidden text-smoke transition hover:text-cream sm:block">
               Demo shop
+            </Link>
+            <Link href="/start" className="rounded-full bg-cream px-4 py-1.5 font-medium text-wax transition hover:bg-white">
+              Create your shop
             </Link>
           </div>
         </nav>
@@ -196,11 +199,11 @@ export default async function Home() {
                 and paid through PayPal by those assistants, with an agent that runs the after-sale within your rules.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-3">
-                <Link href={`/shop/${seller.slug}`} className={primary}>
-                  Visit the demo shop
+                <Link href="/start" className={primary}>
+                  Create your shop
                 </Link>
-                <Link href="/seller/connect" className={secondary}>
-                  Connect your AI
+                <Link href={`/shop/${seller.slug}`} className={secondary}>
+                  Visit the demo shop
                 </Link>
               </div>
             </div>
@@ -347,16 +350,19 @@ export default async function Home() {
               Open your shop to every AI assistant.
             </h2>
             <p className="relative mx-auto mt-4 max-w-md text-smoke">
-              Try the demo as a buyer, or sign in as Maya and watch the agent work.
+              Create your own shop in about a minute, or explore Maya&apos;s Candles as a buyer and watch her agent work.
             </p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
-              <Link href={`/shop/${seller.slug}`} className={primary}>
+              <Link href="/start" className={primary}>
+                Create your shop
+              </Link>
+              <Link href={`/shop/${seller.slug}`} className={secondary}>
                 Visit the demo shop
               </Link>
-              <Link href="/seller/inbox" className={secondary}>
-                Open the seller Inbox
-              </Link>
             </div>
+            <Link href="/seller/inbox" className="relative mt-5 inline-block text-sm text-smoke underline-offset-4 hover:text-cream hover:underline">
+              Or sign in as Maya
+            </Link>
           </div>
         </section>
       </main>

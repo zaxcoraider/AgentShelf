@@ -186,9 +186,14 @@ export async function runSellerAgent(seller: Seller, task: string, opts: { model
   const steps: AgentStep[] = [];
   let acted = false;
 
+  // Visitor shops share the platform's sandbox PayPal account, so PayPal's account-wide read tools
+  // (list transactions/disputes, insights) would show other shops' payments. They get only our
+  // per-shop tools, which read their own orders, refunds and disputes.
+  const accountTools = process.env.PAYPAL_CLIENT_ID && !seller.visitor ? paypalTools("readOnly") : {};
+
   // Record each call, and note once anything has run so a failed run is never retried on top of it.
   const tools = Object.fromEntries(
-    Object.entries({ ...(process.env.PAYPAL_CLIENT_ID ? paypalTools("readOnly") : {}), ...sellerTools(seller) }).map(
+    Object.entries({ ...accountTools, ...sellerTools(seller) }).map(
       ([name, t]) => [
         name,
         {

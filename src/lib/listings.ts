@@ -23,8 +23,12 @@ export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 export const listingDraft = z.object({
   title: z.string().describe("Short product name, under 60 characters, no emojis"),
   description: z.string().describe("Two or three warm, specific sentences for shoppers. Only claim what the photo or shop policy supports."),
-  scent: z.string().describe("Two to four scent notes, comma-separated, e.g. 'Lavender, chamomile'; 'Unscented' if none. Not a sentence."),
-  size: z.string().describe("Size only, e.g. '8 oz'; if not visible, the shop's usual size"),
+  scent: z
+    .string()
+    .describe(
+      "Key details, comma-separated, not a sentence: for scented products two to four scent notes (e.g. 'Lavender, chamomile'); otherwise two to four defining features such as material, colour or finish (e.g. 'Stoneware, matte sage glaze').",
+    ),
+  size: z.string().describe("Size only, e.g. '8 oz' or '12 cm tall'; if not visible, the shop's usual size"),
   suggestedPriceUsd: z.number().describe("Price in USD that fits this shop's existing prices"),
   priceReason: z.string().describe("One sentence on why that price, comparing to the shop's products"),
 });

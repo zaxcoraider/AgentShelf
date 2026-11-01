@@ -1,7 +1,8 @@
 /**
- * Demo sign-in for the seller side. One password (SELLER_DEMO_PASSWORD) unlocks the demo
- * seller; a signed cookie keeps them signed in. With no password set (local runs), the
- * seller pages stay open. Web Crypto only, so this also runs in middleware.
+ * Seller sign-in. SELLER_DEMO_PASSWORD unlocks the showcase shop (Maya's); visitor shops made on
+ * /start have their own password (src/lib/passwords.ts). A signed cookie names the shop.
+ * With no demo password set (local runs), seller pages stay open and default to the showcase
+ * shop. Web Crypto only, so this also runs in middleware.
  */
 
 export const SESSION_COOKIE = "agentshelf_seller";
@@ -26,11 +27,19 @@ function sameText(a: string, b: string) {
   return diff === 0;
 }
 
+/**
+ * What session cookies are signed with: SESSION_SECRET if set, else the demo password (so
+ * changing it signs everyone out). Locally, with neither set, a fixed dev key, so visitor
+ * shops created on a laptop can still sign in.
+ */
+function sessionSecret() {
+  return process.env.SESSION_SECRET || process.env.SELLER_DEMO_PASSWORD || "agentshelf-local-dev-only";
+}
+
 async function sign(payload: string) {
-  // Keyed on the password, so changing it signs everyone out.
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(`agentshelf-session:${process.env.SELLER_DEMO_PASSWORD}`),
+    encoder.encode(`agentshelf-session:${sessionSecret()}`),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],

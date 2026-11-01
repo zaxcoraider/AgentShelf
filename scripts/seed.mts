@@ -6,7 +6,7 @@
  *      npm run db:seed -- --reset → deletes the shop (and its orders) first
  */
 import { existsSync, readFileSync } from "node:fs";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, lt } from "drizzle-orm";
 import { db, schema } from "../src/lib/db";
 
 const SLUG = "mayas-candles";
@@ -71,6 +71,13 @@ async function ensureDemoDisputes(sellerId: string) {
   }
   return shipped.length;
 }
+
+// Visitor shops (made on /start) past their expiry go, with their products, orders and agent log.
+const expired = await db
+  .delete(schema.sellers)
+  .where(and(eq(schema.sellers.visitor, true), lt(schema.sellers.expiresAt, new Date())))
+  .returning({ slug: schema.sellers.slug });
+if (expired.length) console.log(`Removed ${expired.length} expired visitor shops.`);
 
 const existing = await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, SLUG) });
 if (existing && !reset) {

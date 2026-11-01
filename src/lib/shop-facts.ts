@@ -39,7 +39,7 @@ export function policyLines(seller: Seller): string[] {
       ? `Ships only within ${countries[0]}. Does not ship to any other country.`
       : `Ships to: ${countries.join(", ")}. Does not ship to any other country.`,
     `Orders ship within ${range(p.processingDays)} business days via ${p.carrier}, then take ${range(p.transitDays)} business days to arrive.`,
-    `Shipping is a flat ${usd(p.shippingCents)} per order.`,
+    p.shippingCents ? `Shipping is a flat ${usd(p.shippingCents)} per order.` : "Shipping is free on every order.",
     p.returnsDays > 0
       ? `Returns accepted within ${p.returnsDays} days of delivery if ${p.returnsCondition}. Return shipping is paid by the ${p.returnShippingPaidBy}.`
       : "No returns.",
@@ -70,7 +70,7 @@ export function publicPolicy(seller: Seller) {
         processingBusinessDays: p.processingDays,
         carrier: p.carrier,
         transitBusinessDays: p.transitDays,
-        flatRate: usd(p.shippingCents),
+        flatRate: p.shippingCents ? usd(p.shippingCents) : "free",
       },
       returns: {
         accepted: p.returnsDays > 0,
