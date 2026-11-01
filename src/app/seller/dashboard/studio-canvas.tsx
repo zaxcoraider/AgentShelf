@@ -17,6 +17,11 @@ import { aiSetup, aiToolDisplay } from "./studio-ai";
 import { CUSTOM_WIDGETS } from "./widgets";
 
 const AI_MODULES = [AgStudioAiModule];
+const PAGES = [
+  { id: "overview", label: "Overview" },
+  { id: "watch", label: "Watch" },
+] as const;
+type PageId = (typeof PAGES)[number]["id"];
 // Studio's catalogue plus our two widgets, under their own menu heading.
 const WIDGETS = (defaults: { menu: unknown[] }) =>
   createWidgets({
@@ -56,6 +61,7 @@ export default function StudioCanvas({
 }) {
   const [mode, setMode] = useState<AgStudioMode>("view");
   const [asking, setAsking] = useState(false);
+  const [page, setPage] = useState<PageId>("overview");
   // Studio treats a new object as new data, so keep the reference stable across renders.
   const sources = useMemo(() => data as unknown as AgDataSourcesDefinition, [data]);
   const style = useMemo(() => ({ height: "100%", width: "100%" }), []);
@@ -63,6 +69,14 @@ export default function StudioCanvas({
   // `ai` is read once at creation; build it once even if a live refresh hands us a new models array.
   const [ai] = useState(() => (models.length ? aiSetup(models) : undefined));
   const studio = useRef<AgStudioApi | null>(null);
+
+  // Studio has pages but no page tabs of its own; switch with setState, as its docs do.
+  const showPage = useCallback((id: PageId) => {
+    const api = studio.current;
+    if (!api) return;
+    api.setState({ ...api.getState(), selectedPageId: id });
+    setPage(id);
+  }, []);
 
   // Studio's chat panel lives in edit mode; "Ask AI" opens it with the building panels tucked away.
   const askAi = useCallback(() => {
@@ -81,10 +95,28 @@ export default function StudioCanvas({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-3 pb-3">
-        <p className="text-sm text-smoke">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+        <div role="tablist" aria-label="Dashboard pages" className="flex items-center gap-1 rounded-full border border-white/[0.07] bg-white/[0.02] p-1">
+          {PAGES.map((p) => (
+            <button
+              key={p.id}
+              role="tab"
+              type="button"
+              aria-selected={page === p.id}
+              onClick={() => showPage(p.id)}
+              className={`rounded-full px-3.5 py-1 text-sm transition-colors ${
+                page === p.id ? "bg-white/[0.09] text-cream" : "text-smoke hover:text-cream"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <p className="mr-auto text-sm text-smoke">
           {mode === "view"
-            ? "Live from your shop and PayPal."
+            ? page === "watch"
+              ? "A page you build with Ask AI, e.g. “add the dispute countdown and the agent feed here”."
+              : "Live from your shop and PayPal."
             : asking
               ? "Ask what needs you, why a refund was blocked, or for a new chart. Your PayPal seller agent and AG Studio's agents work together."
               : "Drag widgets, add charts, or change what each one shows."}

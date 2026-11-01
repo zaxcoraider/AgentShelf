@@ -178,7 +178,8 @@ You answer questions about the shop's operations: PayPal disputes and their dead
 const LEAD_ADDENDUM = `
 This dashboard belongs to an AgentShelf seller who takes PayPal payments from AI assistants and a storefront.
 You also have a "seller" agent: the PayPal seller agent. Delegate to it for anything about operations the dashboard tables don't answer on their own: what needs attention today, PayPal dispute deadlines, refund rules and whether a refund would be automatic, approvals waiting, orders to ship, or what the seller agent did and why.
-For charts, tables, filters and layout, keep using the built-in agents. A request can need both: e.g. get the facts from the seller agent, then have the dashboard show them.`;
+For charts, tables, filters and layout, keep using the built-in agents. A request can need both: e.g. get the facts from the seller agent, then have the dashboard show them.
+This dashboard has two AgentShelf widgets in the widget catalogue: "dispute-countdown" (live PayPal dispute deadlines) and "agent-feed" (live seller-agent actions). Both need no data mapping and no configuring: placing one is the whole job. When asked to show disputes or what the agent is doing, prefer them over building a chart or table.`;
 
 export const PROMPT_STARTERS: AgAiPromptStarter[] = [
   { label: "What needs me today?", prompt: "What needs my attention today? Start with the most urgent." },
@@ -187,7 +188,10 @@ export const PROMPT_STARTERS: AgAiPromptStarter[] = [
     prompt: "Add a line chart of net sales over time, split by whether an AI assistant or the storefront made the sale.",
   },
   { label: "Why was a refund blocked?", prompt: "Did the seller agent block or queue any refunds? Explain why for each." },
-  { label: "Explain my data", prompt: "What tables and fields does this dashboard have, and what does each measure?" },
+  {
+    label: "Build a live watch page",
+    prompt: "Add the dispute countdown and the seller agent feed side by side on this page.",
+  },
 ];
 
 export function aiSetup(models: AgAiModel[]): AgAiHarnessSetup {

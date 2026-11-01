@@ -309,8 +309,13 @@ export const CUSTOM_WIDGETS = [
     defaultSize: { width: 420, height: 360 },
     minSize: { width: 260, height: 200 },
     ai: {
+      label: "Dispute countdown",
       description:
-        "Live countdown to each open PayPal dispute's seller-response deadline, soonest first, with the seller agent's recommendation. Reads the Disputes table; needs no configuration.",
+        "Live countdown to each open PayPal dispute's seller-response deadline, soonest first, with the seller agent's recommendation.",
+      usage:
+        "Use when the seller asks about disputes, deadlines, what's urgent, or chargebacks. Prefer it over a table or KPI of disputes: it ticks live and turns amber under 3 days, red under 1.",
+      configuration:
+        "Needs no data mapping and no format: it always reads the Disputes table, and page filters apply to it. Add it and leave dataMapping empty ({}). A tall slot, about 8 columns wide and 16 rows high, suits it.",
     },
   },
   {
@@ -322,8 +327,13 @@ export const CUSTOM_WIDGETS = [
     defaultSize: { width: 420, height: 400 },
     minSize: { width: 280, height: 220 },
     ai: {
+      label: "Seller agent feed",
       description:
-        "Live feed of the PayPal seller agent's latest actions (refunds, shipment tracking, dispute reviews) with their outcome: done by agent, needs the seller, approved, or blocked by a rule. Reads the Agent actions table; needs no configuration.",
+        "Live feed of the PayPal seller agent's latest actions (refunds, shipment tracking, dispute reviews) with their outcome: done by agent, needs the seller, approved, or blocked by a rule, and the agent's reason.",
+      usage:
+        "Use when the seller asks what the agent did, wants to watch the agent work, or asks about automatic or blocked refunds. Prefer it over a grid of agent actions for a live, readable view.",
+      configuration:
+        "Needs no data mapping and no format: it always reads the Agent actions table, and page filters apply to it. Add it and leave dataMapping empty ({}). About 9 columns wide and 18 rows high.",
     },
   },
 ];

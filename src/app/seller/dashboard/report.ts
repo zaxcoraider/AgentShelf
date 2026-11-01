@@ -116,6 +116,8 @@ export const initialReport = {
         orders: { xTrack: 0, yTrack: 55, xSpan: 24, ySpan: 16 },
       },
     },
+    // An empty page to build with "Ask AI" (e.g. "add the dispute countdown and the agent feed here").
+    { id: "watch", widgets: {}, widgetLayout: {} },
   ],
   selectedPageId: "overview",
   panels: { filters: { collapsed: true }, edit: { collapsed: true } },
