@@ -1,5 +1,6 @@
 import { and, eq, notInArray } from "drizzle-orm";
 import { db, schema } from "./db";
+import { disputeDueAt } from "./disputes";
 import type { Seller } from "./db/schema";
 import { ACTION_STATUS_LABEL, DISPUTE_REASON, ORDER_STATUS_LABEL, TOOL_LABEL } from "./labels";
 
@@ -30,7 +31,7 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
     db.query.products.findMany({ where: eq(schema.products.sellerId, seller.id) }),
     db.query.agentActions.findMany({ where: eq(schema.agentActions.sellerId, seller.id) }),
     db
-      .select({ dispute: schema.disputes })
+      .select({ dispute: schema.disputes, demo: schema.orders.demo })
       .from(schema.disputes)
       .innerJoin(schema.orders, eq(schema.disputes.orderId, schema.orders.id))
       .where(eq(schema.orders.sellerId, seller.id)),
@@ -131,17 +132,21 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
       {
         id: "disputes",
         name: "Disputes",
-        data: disputes.map(({ dispute: d }) => ({
+        data: disputes.map(({ dispute: d, demo }) => {
+          const dueAt = disputeDueAt(d.responseDueAt, demo, now);
+          return {
           disputeId: d.id,
           orderId: orderIds.has(d.orderId) ? d.orderId : null,
           reason: DISPUTE_REASON[d.reason ?? ""] ?? "Buyer opened a dispute",
           status: d.status === "RESOLVED" ? "Resolved" : "Open",
           openDispute: d.status === "RESOLVED" ? 0 : 1,
           amount: d.amountCents != null ? dollars(d.amountCents) : null,
-          dueDate: d.responseDueAt ? isoDate(d.responseDueAt) : null,
-          daysLeft: d.responseDueAt ? Math.ceil((d.responseDueAt.getTime() - now) / DAY) : null,
+          dueAt: dueAt?.toISOString() ?? null,
+          dueDate: dueAt ? isoDate(dueAt) : null,
+          daysLeft: dueAt ? Math.ceil((dueAt.getTime() - now) / DAY) : null,
           recommendation: d.aiRecommendation ?? "",
-        })),
+          };
+        }),
         fields: [
           { id: "disputeId", ...hidden },
           { id: "orderId", ...hidden },
@@ -149,6 +154,7 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
           { id: "status", name: "Status", ...text },
           { id: "openDispute", name: "Open disputes", format: "integerFormat" },
           { id: "amount", name: "Amount", ...currency },
+          { id: "dueAt", name: "Respond by (time)", format: "dateTimeFormat" },
           { id: "dueDate", name: "Respond by", format: "dateFormat" },
           { id: "daysLeft", name: "Days left", format: "integerFormat" },
           { id: "recommendation", name: "Agent's recommendation", ...text },

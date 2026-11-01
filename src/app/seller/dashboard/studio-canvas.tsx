@@ -9,13 +9,21 @@ import {
   enableStudioDevValidations,
   studioTheme,
 } from "ag-studio";
-import { AgStudio, AgStudioProvider } from "ag-studio-react";
+import { AgStudio, AgStudioProvider, createWidgets } from "ag-studio-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard-data";
 import { initialReport } from "./report";
 import { aiSetup, aiToolDisplay } from "./studio-ai";
+import { CUSTOM_WIDGETS } from "./widgets";
 
 const AI_MODULES = [AgStudioAiModule];
+// Studio's catalogue plus our two widgets, under their own menu heading.
+const WIDGETS = (defaults: { menu: unknown[] }) =>
+  createWidgets({
+    additionalTypes: CUSTOM_WIDGETS,
+    menu: [...defaults.menu, { label: "AgentShelf", widgetIds: CUSTOM_WIDGETS.map((w) => w.id) }],
+  } as never);
+
 const LOCALE_TEXT = {
   panelTitleAi: "Shop assistant",
   aiMessageInputPlaceholder: "Ask about your shop, or ask for a chart…",
@@ -52,7 +60,8 @@ export default function StudioCanvas({
   const sources = useMemo(() => data as unknown as AgDataSourcesDefinition, [data]);
   const style = useMemo(() => ({ height: "100%", width: "100%" }), []);
   // No models configured → no assistant (the chat panel only appears when `ai` is set).
-  const ai = useMemo(() => (models.length ? aiSetup(models) : undefined), [models]);
+  // `ai` is read once at creation; build it once even if a live refresh hands us a new models array.
+  const [ai] = useState(() => (models.length ? aiSetup(models) : undefined));
   const studio = useRef<AgStudioApi | null>(null);
 
   // Studio's chat panel lives in edit mode; "Ask AI" opens it with the building panels tucked away.
@@ -117,6 +126,7 @@ export default function StudioCanvas({
             ai={ai}
             aiToolDisplay={aiToolDisplay}
             localeText={LOCALE_TEXT}
+            widgets={WIDGETS as never}
           />
         </AgStudioProvider>
       </div>

@@ -11,6 +11,7 @@ import { findOrder } from "../shop";
 import { policyText } from "../shop-facts";
 import { markShipped, recordDisputeReview, requestRefund, type ActionResult } from "./actions";
 import { DAILY_AUTO_REFUND_CAP_CENTS } from "./guardrails";
+import { disputeDueAt } from "../disputes";
 
 /**
  * The seller agent: an LLM with the seller's policy, read-only PayPal Agent Toolkit tools,
@@ -74,7 +75,7 @@ async function describeOrder(order: Order) {
       paypalDisputeId: d.paypalDisputeId,
       reason: d.reason,
       status: d.status,
-      respondBy: d.responseDueAt?.toISOString().slice(0, 10),
+      respondBy: disputeDueAt(d.responseDueAt, order.demo)?.toISOString().slice(0, 10),
       recommendation: d.aiRecommendation,
     })),
     recentActions: actions.map((a) => ({ tool: a.tool, status: a.status, reason: a.reason })),

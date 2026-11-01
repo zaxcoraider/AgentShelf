@@ -6,7 +6,7 @@
  *      npm run db:seed -- --reset → deletes the shop (and its orders) first
  */
 import { existsSync, readFileSync } from "node:fs";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "../src/lib/db";
 
 const SLUG = "mayas-candles";
@@ -38,10 +38,48 @@ async function attachSeedPhotos(sellerId: string) {
   return attached;
 }
 
+const DISPUTE_RECOMMENDATION = "Tracking shows it was delivered. Respond with the tracking number as evidence.";
+
+/**
+ * Databases seeded before disputes existed get two demo disputes on shipped demo orders,
+ * so the dashboard's dispute countdown has something to count. No-op once any dispute exists.
+ */
+async function ensureDemoDisputes(sellerId: string) {
+  const any = await db
+    .select({ id: schema.disputes.id })
+    .from(schema.disputes)
+    .innerJoin(schema.orders, eq(schema.disputes.orderId, schema.orders.id))
+    .where(eq(schema.orders.sellerId, sellerId))
+    .limit(1);
+  if (any.length) return 0;
+  const shipped = await db.query.orders.findMany({
+    where: and(eq(schema.orders.sellerId, sellerId), eq(schema.orders.demo, true), eq(schema.orders.status, "shipped")),
+    orderBy: [asc(schema.orders.createdAt)],
+    limit: 2,
+  });
+  for (const [i, o] of shipped.entries()) {
+    await db.update(schema.orders).set({ status: "disputed" }).where(eq(schema.orders.id, o.id));
+    await db.insert(schema.disputes).values({
+      orderId: o.id,
+      paypalDisputeId: `PP-D-DEMO-${i + 1}`,
+      reason: "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      status: "WAITING_FOR_SELLER_RESPONSE",
+      amountCents: o.amountCents,
+      responseDueAt: new Date(Date.now() + (2 + i * 4) * 24 * 60 * 60 * 1000),
+      aiRecommendation: DISPUTE_RECOMMENDATION,
+    });
+  }
+  return shipped.length;
+}
+
 const existing = await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, SLUG) });
 if (existing && !reset) {
   const attached = await attachSeedPhotos(existing.id);
-  console.log(`"${existing.name}" already seeded${attached ? `; added ${attached} product photos` : ""}. Use --reset to recreate it.`);
+  const disputed = await ensureDemoDisputes(existing.id);
+  console.log(
+    `"${existing.name}" already seeded${attached ? `; added ${attached} product photos` : ""}` +
+      `${disputed ? `; added ${disputed} demo disputes` : ""}. Use --reset to recreate it.`,
+  );
   process.exit(0);
 }
 if (existing) await db.delete(schema.sellers).where(eq(schema.sellers.id, existing.id));
@@ -205,7 +243,7 @@ const disputeRows = orders
     status: "WAITING_FOR_SELLER_RESPONSE",
     amountCents: o.amountCents,
     responseDueAt: new Date(now + (2 + i * 4) * DAY),
-    aiRecommendation: "Tracking shows it was delivered. Respond with the tracking number as evidence.",
+    aiRecommendation: DISPUTE_RECOMMENDATION,
   }));
 if (disputeRows.length) await db.insert(schema.disputes).values(disputeRows);
 

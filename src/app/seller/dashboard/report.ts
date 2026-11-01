@@ -1,5 +1,8 @@
 import type { AgReportState } from "ag-studio";
 
+// Our custom widget types (see widgets.tsx) aren't in the default registry's type union.
+type Report = AgReportState;
+
 /**
  * The dashboard's starting layout. The seller can rearrange it in Studio's edit mode, and the
  * Studio agents can add to it. Widget types and data mappings follow the AG Studio 3 widget catalogue;
@@ -13,7 +16,7 @@ const withLegend = (text: string) => ({
 });
 const newestFirst = (id: string) => [{ field: { id }, direction: "desc" as const }];
 
-export const initialReport: AgReportState = {
+export const initialReport = {
   pages: [
     {
       id: "overview",
@@ -80,6 +83,8 @@ export const initialReport: AgReportState = {
           sort: newestFirst("agentActions.at"),
           format: title("What your agent did"),
         },
+        "dispute-countdown": { type: "dispute-countdown" },
+        "agent-feed": { type: "agent-feed" },
         orders: {
           type: "grid",
           dataMapping: {
@@ -103,13 +108,15 @@ export const initialReport: AgReportState = {
         "kpi-ai-share": { xTrack: 12, yTrack: 0, xSpan: 6, ySpan: 7 },
         "kpi-disputes": { xTrack: 18, yTrack: 0, xSpan: 6, ySpan: 7 },
         "sales-by-day": { xTrack: 0, yTrack: 7, xSpan: 16, ySpan: 16 },
-        "by-assistant": { xTrack: 16, yTrack: 7, xSpan: 8, ySpan: 16 },
-        "by-product": { xTrack: 0, yTrack: 23, xSpan: 10, ySpan: 16 },
-        "agent-actions": { xTrack: 10, yTrack: 23, xSpan: 14, ySpan: 16 },
-        orders: { xTrack: 0, yTrack: 39, xSpan: 24, ySpan: 16 },
+        "dispute-countdown": { xTrack: 16, yTrack: 7, xSpan: 8, ySpan: 16 },
+        "agent-feed": { xTrack: 0, yTrack: 23, xSpan: 9, ySpan: 18 },
+        "by-assistant": { xTrack: 9, yTrack: 23, xSpan: 6, ySpan: 18 },
+        "by-product": { xTrack: 15, yTrack: 23, xSpan: 9, ySpan: 18 },
+        "agent-actions": { xTrack: 0, yTrack: 41, xSpan: 24, ySpan: 14 },
+        orders: { xTrack: 0, yTrack: 55, xSpan: 24, ySpan: 16 },
       },
     },
   ],
   selectedPageId: "overview",
   panels: { filters: { collapsed: true }, edit: { collapsed: true } },
-};
+} as unknown as Report;

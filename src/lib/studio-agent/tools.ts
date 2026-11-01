@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { autoRefundedToday } from "../agent/actions";
 import { DAILY_AUTO_REFUND_CAP_CENTS, decideRefund } from "../agent/guardrails";
 import { db, schema } from "../db";
+import { disputeDueAt } from "../disputes";
 import type { Order, Seller } from "../db/schema";
 import { ACTION_STATUS_LABEL, DISPUTE_REASON, ORDER_STATUS_LABEL, TOOL_LABEL } from "../labels";
 import { usd } from "../money";
@@ -58,12 +59,13 @@ export async function shopBriefing(seller: Seller, now = Date.now()) {
   const openDisputes = disputes
     .filter(({ dispute }) => dispute.status !== "RESOLVED")
     .map(({ dispute: d, order }) => {
-      const hoursLeft = d.responseDueAt ? Math.round((d.responseDueAt.getTime() - now) / HOUR) : null;
+      const dueAt = disputeDueAt(d.responseDueAt, order.demo, now);
+      const hoursLeft = dueAt ? Math.round((dueAt.getTime() - now) / HOUR) : null;
       return {
         order: orderLine(order, order.productId ? titles.get(order.productId) : null),
         reason: DISPUTE_REASON[d.reason ?? ""] ?? "Buyer opened a dispute",
         amount: d.amountCents != null ? usd(d.amountCents) : undefined,
-        respondBy: d.responseDueAt?.toISOString(),
+        respondBy: dueAt?.toISOString(),
         hoursLeft,
         overdue: hoursLeft != null && hoursLeft < 0,
         agentRecommendation: d.aiRecommendation ?? undefined,

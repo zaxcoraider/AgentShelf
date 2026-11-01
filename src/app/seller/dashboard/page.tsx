@@ -1,6 +1,7 @@
 import { dashboardData } from "@/lib/dashboard-data";
 import { requireSeller } from "@/lib/seller-session";
 import { studioModels } from "@/lib/studio-agent/models";
+import { LiveUpdates } from "../inbox/live";
 import { SellerStudio } from "./studio";
 
 // The seller dashboard, built with AG Studio: sales, AI vs storefront, the agent's work, disputes.
@@ -12,7 +13,10 @@ export default async function Dashboard() {
   return (
     <main className="flex h-[calc(100dvh-3.5rem)] flex-col px-4 py-6 sm:px-6">
       <p className="text-sm opacity-60">{seller.name}</p>
-      <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+        <LiveUpdates />
+      </div>
       <div className="mt-4 min-h-0 flex-1">
         <SellerStudio data={data} licenseKey={process.env.AG_STUDIO_LICENSE_KEY || undefined} models={studioModels()} />
       </div>

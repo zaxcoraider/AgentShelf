@@ -9,6 +9,7 @@ import { aiConfigured } from "@/lib/ai";
 import { ACTION_STATUS_LABEL, DISPUTE_REASON, TOOL_LABEL } from "@/lib/labels";
 import { ApprovalButtons, AskAgent, ShipForm } from "./forms";
 import { Arrive, LiveUpdates } from "./live";
+import { disputeDueAt } from "@/lib/disputes";
 
 // Seller inbox: refunds waiting for approval, paid orders to ship, and everything the agent did.
 export const dynamic = "force-dynamic";
@@ -151,7 +152,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
         ) : (
           <ul className="space-y-3">
             {openDisputes.map(({ dispute: d, order: o }) => {
-              const due = dueLabel(d.responseDueAt);
+              const due = dueLabel(disputeDueAt(d.responseDueAt, o.demo));
               return (
                 <Arrive key={d.id} className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
