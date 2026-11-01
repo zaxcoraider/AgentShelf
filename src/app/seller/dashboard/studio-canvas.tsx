@@ -13,7 +13,8 @@ import { AgStudio, AgStudioProvider, createWidgets } from "ag-studio-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard-data";
 import { initialReport } from "./report";
-import { aiSetup, aiToolDisplay } from "./studio-ai";
+import { aiSetup } from "./studio-ai";
+import { aiToolDisplay } from "./tool-details";
 import { CUSTOM_WIDGETS } from "./widgets";
 
 const AI_MODULES = [AgStudioAiModule];
@@ -156,7 +157,8 @@ export default function StudioCanvas({
             mode={mode}
             theme={theme}
             ai={ai}
-            aiToolDisplay={aiToolDisplay}
+            // React detail components (per the docs); the default registry type only names TS classes.
+            aiToolDisplay={aiToolDisplay as never}
             localeText={LOCALE_TEXT}
             widgets={WIDGETS as never}
           />

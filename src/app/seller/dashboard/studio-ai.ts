@@ -8,7 +8,6 @@ import {
   type AgLlmAdapter,
   type AgLlmResponse,
   type AgStudioApi,
-  type AgStudioProperties,
   createAiHarness,
   directLlmRunner,
 } from "ag-studio";
@@ -233,46 +232,3 @@ export function aiSetup(models: AgAiModel[]): AgAiHarnessSetup {
       };
     });
 }
-
-// ---------- How the seller agent's calls read in the chat panel ----------
-
-const pill = (data: unknown, unit: string) => (Array.isArray(data) ? `${data.length} ${unit}` : undefined);
-
-export const aiToolDisplay: AgStudioProperties["aiToolDisplay"] = {
-  shop_briefing: {
-    label: ({ result }) => {
-      const data = result?.success ? (result.data as { openDisputes?: unknown[] } | undefined) : undefined;
-      return {
-        text: result ? "Checked disputes, approvals and orders to ship" : "Checking what needs you",
-        pill: data?.openDisputes ? `${data.openDisputes.length} open disputes` : undefined,
-      };
-    },
-  },
-  agent_activity: {
-    label: ({ args, result }) => ({
-      text: `${result ? "Read" : "Reading"} the seller agent's log${args?.outcome ? `: ${args.outcome}` : ""}`,
-      pill: result?.success ? pill(result.data, "actions") : undefined,
-    }),
-  },
-  find_orders: {
-    label: ({ args, result }) => ({
-      text: `${result ? "Looked up" : "Looking up"} orders${args?.query ? ` for “${args.query}”` : ""}`,
-      pill: result?.success ? pill(result.data, "found") : undefined,
-    }),
-  },
-  check_refund: {
-    label: ({ args, result }) => {
-      const why = result?.success ? (result.data as { verdict?: string } | undefined)?.verdict : undefined;
-      return {
-        text: `${result ? "Checked" : "Checking"} the refund rules${args?.orderRef ? ` for order ${args.orderRef}` : ""}`,
-        pill: why?.startsWith("The seller agent would refund")
-          ? "Automatic"
-          : why?.includes("ask you")
-            ? "Needs approval"
-            : why
-              ? "Blocked"
-              : undefined,
-      };
-    },
-  },
-};
