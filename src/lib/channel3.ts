@@ -36,13 +36,21 @@ type C3Product = {
   offers?: { url: string; domain: string; price: { price: number; currency: string } }[];
 };
 
+/** What a market lookup found, so the seller sees why there is (or isn't) a market range. */
+export type MarketLookup =
+  | { status: "ok"; market: MarketPrices }
+  | { status: "few"; found: number; priced: number }
+  | { status: "off" }
+  | { status: "error" };
+
 /**
- * Similar products for sale, found from the product photo. Null when Channel3 isn't configured,
- * errors, or finds too few priced matches to say anything useful; listing still works without it.
+ * Similar products for sale, found from the product photo. Never throws: listing works without it,
+ * and the result says whether Channel3 is off, failed, or found too few priced matches.
  */
-export async function marketPrices(image: { data: Buffer }): Promise<MarketPrices | null> {
+export async function marketPrices(image: { data: Buffer }): Promise<MarketLookup> {
   const key = process.env.CHANNEL3_API_KEY;
-  if (!key) return null;
+  if (!key) return { status: "off" };
+  const started = Date.now();
   try {
     const res = await fetch(`${API}/image-search`, {
       method: "POST",
@@ -52,13 +60,16 @@ export async function marketPrices(image: { data: Buffer }): Promise<MarketPrice
     });
     if (!res.ok) {
       console.warn("[channel3] image search failed:", res.status, (await res.text().catch(() => "")).slice(0, 200));
-      return null;
+      return { status: "error" };
     }
-    const { products } = (await res.json()) as { products?: C3Product[] };
-    return summarize(products ?? []);
+    const { products = [] } = (await res.json()) as { products?: C3Product[] };
+    const market = summarize(products);
+    const priced = products.filter((p) => p.offers?.some((o) => o.price?.currency === "USD" && o.price.price > 0)).length;
+    console.log(`[channel3] ${products.length} matches, ${priced} priced in USD, ${Date.now() - started} ms`);
+    return market ? { status: "ok", market } : { status: "few", found: products.length, priced };
   } catch (err) {
     console.warn("[channel3] image search error:", err instanceof Error ? err.message : err);
-    return null;
+    return { status: "error" };
   }
 }
 

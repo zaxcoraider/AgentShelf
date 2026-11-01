@@ -10,7 +10,7 @@ import { createCatalogProduct } from "./paypal/toolkit";
 import { appUrl } from "./shop";
 import { policyText } from "./shop-facts";
 import { LIMITS } from "./listing-limits";
-import { marketContext, marketPrices, type MarketPrices } from "./channel3";
+import { marketContext, marketPrices, type MarketLookup } from "./channel3";
 
 /**
  * Photo → listing onboarding: a vision model drafts the listing from a product photo,
@@ -50,10 +50,11 @@ export async function draftListing(
 ): Promise<DraftedListing> {
   checkImage(image);
   // Market prices from the photo (Channel3) and the shop's own catalog, fetched together.
-  const [catalog, market] = await Promise.all([
+  const [catalog, lookup] = await Promise.all([
     db.query.products.findMany({ where: eq(schema.products.sellerId, seller.id) }),
     marketPrices(image),
   ]);
+  const market = lookup.status === "ok" ? lookup.market : null;
   const context = [
     `Shop: ${seller.name}. ${seller.tagline ?? ""}`,
     `Shop policy:\n${policyText(seller)}`,
@@ -91,11 +92,11 @@ export async function draftListing(
     size: clip(output.size, LIMITS.size),
     suggestedPriceUsd: Math.round(output.suggestedPriceUsd * 100) / 100,
     alreadySells: same?.title,
-    market: market ?? undefined,
+    market: lookup,
   };
 }
 
-export type DraftedListing = ListingDraft & { alreadySells?: string; market?: MarketPrices };
+export type DraftedListing = ListingDraft & { alreadySells?: string; market?: MarketLookup };
 
 /** Shorten to `max` characters, preferring the last comma, then a word boundary. */
 function clip(text: string, max: number) {

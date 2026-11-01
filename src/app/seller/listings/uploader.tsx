@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LIMITS } from "@/lib/listing-limits";
+import type { MarketPrices } from "@/lib/channel3";
 import type { DraftedListing } from "@/lib/listings";
 import { draft, publish } from "./actions";
 
@@ -166,7 +167,21 @@ export function Uploader({ enabled, shopUrl }: { enabled: boolean; shopUrl: stri
                   </p>
                 )}
                 {item.draft?.priceReason && <p className="text-xs opacity-60">Price: {item.draft.priceReason}</p>}
-                {item.draft?.market && <MarketRange market={item.draft.market} />}
+                {item.draft?.market?.status === "ok" && <MarketRange market={item.draft.market.market} />}
+                {item.draft?.market?.status === "few" && (
+                  <p className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 text-xs text-smoke">
+                    <span className="text-cream">Market price:</span> Channel3 found {item.draft.market.found} similar product
+                    {item.draft.market.found === 1 ? "" : "s"} online but only {item.draft.market.priced} with a US price, too few
+                    for a fair range. The price above is based on your shop. A clearer photo on a plain background usually
+                    finds more.
+                  </p>
+                )}
+                {item.draft?.market?.status === "error" && (
+                  <p className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 text-xs text-smoke">
+                    <span className="text-cream">Market price:</span> Channel3 didn&apos;t answer this time, so the price is based
+                    on your shop. Try the photo again in a moment.
+                  </p>
+                )}
                 {item.message && <p className="text-sm text-red-700 dark:text-red-400">{item.message}</p>}
                 <button
                   disabled={item.state === "publishing"}
@@ -184,7 +199,7 @@ export function Uploader({ enabled, shopUrl }: { enabled: boolean; shopUrl: stri
 }
 
 /** What similar products sell for right now (Channel3), under the suggested price. */
-function MarketRange({ market }: { market: NonNullable<DraftedListing["market"]> }) {
+function MarketRange({ market }: { market: MarketPrices }) {
   const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
   return (
     <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
