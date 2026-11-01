@@ -70,7 +70,8 @@ export async function searchProducts(
 export async function getProduct(seller: Seller, productId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(productId)) return undefined;
   return db.query.products.findFirst({
-    where: and(eq(schema.products.id, productId), eq(schema.products.sellerId, seller.id)),
+    // Hidden products are off sale everywhere: assistants can't look them up by id either.
+    where: and(eq(schema.products.id, productId), eq(schema.products.sellerId, seller.id), eq(schema.products.active, true)),
   });
 }
 

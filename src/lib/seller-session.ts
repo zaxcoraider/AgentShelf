@@ -23,3 +23,12 @@ export async function sessionSeller() {
   // Local runs without a demo password: the seller pages are open and show the showcase shop.
   return sellerAuthEnabled() ? null : currentSeller();
 }
+
+/**
+ * Whether this shop's products and settings can be changed. Visitor shops: always. The showcase
+ * shop (Maya's) is read-only wherever sign-in is on (the deployed demo), so every judge sees the
+ * same demo; locally, with sign-in off, it stays editable.
+ */
+export function canEditShop(seller: { visitor: boolean }) {
+  return seller.visitor || !sellerAuthEnabled();
+}

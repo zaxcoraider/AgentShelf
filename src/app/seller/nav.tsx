@@ -9,7 +9,9 @@ export function SellerNavLinks({ links }: { links: { href: string; label: string
   return (
     <div className="-mx-1 flex min-w-0 items-center gap-1 overflow-x-auto">
       {links.map((l) => {
-        const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+        // "Add products" (/seller/listings) lives under Products.
+        const path = pathname.startsWith("/seller/listings") ? "/seller/products" : pathname;
+        const active = path === l.href || path.startsWith(`${l.href}/`);
         return (
           <Link
             key={l.href}

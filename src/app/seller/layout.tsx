@@ -11,9 +11,10 @@ import { SellerNavLinks } from "./nav";
 const LINKS = [
   { href: "/seller/inbox", label: "Inbox" },
   { href: "/seller/dashboard", label: "Dashboard" },
-  { href: "/seller/listings", label: "Add products" },
+  { href: "/seller/products", label: "Products" },
   { href: "/seller/ai-view", label: "AI's view" },
   { href: "/seller/connect", label: "Connect your AI" },
+  { href: "/seller/settings", label: "Settings" },
 ];
 
 export default async function SellerLayout({ children }: { children: React.ReactNode }) {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { aiConfigured } from "@/lib/ai";
 import { requireSeller } from "@/lib/seller-session";
 import { Uploader } from "./uploader";
@@ -9,8 +10,10 @@ export default async function Listings() {
   const seller = await requireSeller();
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <p className="text-sm opacity-60">{seller.name}</p>
-      <h1 className="text-3xl font-semibold tracking-tight">Add products</h1>
+      <Link href="/seller/products" className="text-sm text-smoke transition-colors hover:text-cream">
+        ← Products
+      </Link>
+      <h1 className="mt-1 text-3xl font-semibold tracking-tight">Add products</h1>
       <p className="mt-1 text-sm opacity-70">
         Snap a photo of each product. AI writes the listing and suggests a price; you check it and publish. Each
         product goes into your PayPal catalog and becomes buyable on your storefront and by AI assistants.
