@@ -1,125 +1,281 @@
-<p align="center"><img src="public/brand/agentshelf-icon.svg" width="96" height="96" alt="AgentShelf logo"></p>
+<p align="center">
+  <img src="public/brand/agentshelf-social.png" alt="AgentShelf: any small shop, buyable by AI assistants. PayPal checkout and a seller agent that follows your rules." width="720">
+</p>
 
-# AgentShelf
+<h3 align="center">Shoppers now ask Claude or ChatGPT to buy things for them.<br>AgentShelf lets any small shop sell to those AI shoppers, get paid with PayPal,<br>and hand the after-sale work to its own agent.</h3>
 
-**Any small shop, buyable by AI assistants, with PayPal checkout and a seller agent that follows your rules.**
+<p align="center">
+  <a href="https://agentshelf-xsh7.onrender.com"><img alt="Try it live" src="https://img.shields.io/badge/▶_Try_it_live-no_setup-F59E0B?style=for-the-badge&labelColor=17130F"></a>
+  <a href="https://agentshelf-xsh7.onrender.com/judges"><img alt="Judge's guide" src="https://img.shields.io/badge/Judge's_guide-10_minutes-FAF7F2?style=for-the-badge&labelColor=17130F"></a>
+  <a href="https://agentshelf-xsh7.onrender.com/start"><img alt="Create your own shop" src="https://img.shields.io/badge/🏪_Create_your_shop-1_minute-3DFFA0?style=for-the-badge&labelColor=17130F"></a>
+</p>
 
-AI assistants are becoming shoppers, but they can only buy from big stores. AgentShelf gives every small seller a shop that Claude, ChatGPT, and other assistants can browse, question, and buy from with PayPal. A seller agent then handles the after-sale work (refunds, shipment tracking, disputes) inside limits the seller sets.
+<p align="center">
+  <img alt="PayPal: 8 APIs and SDKs" src="https://img.shields.io/badge/PayPal-8_APIs_%26_SDKs-0070E0?style=flat-square&labelColor=17130F">
+  <img alt="AG Studio: agents + custom widgets" src="https://img.shields.io/badge/AG_Studio-agents_%2B_custom_widgets-F59E0B?style=flat-square&labelColor=17130F">
+  <img alt="Render: Blueprint + Postgres" src="https://img.shields.io/badge/Render-Blueprint_%2B_Postgres-46E3B7?style=flat-square&labelColor=17130F">
+  <img alt="Channel3: market prices" src="https://img.shields.io/badge/Channel3-market_prices-FAF7F2?style=flat-square&labelColor=17130F">
+  <img alt="MCP + MCP Apps" src="https://img.shields.io/badge/MCP-%2B_MCP_Apps-FAF7F2?style=flat-square&labelColor=17130F">
+  <img alt="Nebius Token Factory" src="https://img.shields.io/badge/Nebius-Token_Factory-FAF7F2?style=flat-square&labelColor=17130F">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/License-MIT-FAF7F2?style=flat-square&labelColor=17130F"></a>
+</p>
 
-Built for [Build What's Next with PayPal and AI](https://paypalaihackathon.devpost.com). Demo shop: **Maya's Candles**, a one-person candle studio.
+<p align="center">
+  <a href="#-see-it-in-5-minutes">See it</a> ·
+  <a href="#-the-problem">The problem</a> ·
+  <a href="#%EF%B8%8F-how-it-works">How it works</a> ·
+  <a href="#-paypal">PayPal</a> ·
+  <a href="#-ag-studio">AG Studio</a> ·
+  <a href="#-channel3">Channel3</a> ·
+  <a href="#%EF%B8%8F-render">Render</a> ·
+  <a href="#-guardrails">Guardrails</a> ·
+  <a href="#-try-it">Try it</a> ·
+  <a href="#-roadmap">Roadmap</a> ·
+  <a href="#-run-locally">Run locally</a>
+</p>
 
-## What it does
+<p align="center">
+  <img src="docs/screens/landing.jpg" alt="AgentShelf home page: an AI assistant finds a candle, asks the seller if it's soy wax, checks out with PayPal, and the order is paid" width="100%">
+  <br><sub>The whole idea in one chat: the assistant finds a product, asks the seller, checks out with PayPal, and it's paid.</sub>
+</p>
 
-| | Feature | Where |
-| --- | --- | --- |
-| 📸 | **Photo → listing, priced against the market.** Drop in product photos; a vision model drafts the title, description, key details and size. **Channel3** image search finds similar products for sale online, and the suggested price is explained against their real range and median (shown with four example listings). Publishing creates the product in the seller's **PayPal catalog** via the Agent Toolkit. | `/seller/listings` |
-| 🤖 | **Shops AI assistants can buy from, through one connector or their own.** The **AgentShelf marketplace MCP** puts every listed shop behind one connector: search spans all shops and each result names its shop; product, checkout, order and refund tools find the right shop from the id, so each shop's own facts, refund rules and seller agent still decide. Every shop also has **its own MCP server** with the same tools. Checkout is a **PayPal order** per shop that the buyer approves. Sellers can opt out of the marketplace in Settings. | `/api/mcp`, `/api/mcp/<shop>` |
-| 🛍️ | **Product cards inside the chat (MCP Apps).** In Claude, ChatGPT, and other hosts that support MCP Apps, search results render as product cards with photos and a **Buy with PayPal** button. The card creates the PayPal order, opens PayPal for the buyer to approve, and flips to “Paid” once the payment is captured. Other assistants get the same data as text. | `src/lib/mcp/product-widget.ts` |
-| 🧭 | **Facts AI can't get wrong.** Each shop's shipping, returns, and materials are structured fields (`src/lib/shop-facts.ts`), served identically to people (storefront), AI assistants (`get_shop_policy`, `ask_seller`), crawlers (schema.org Product, Offer, shipping and return-policy JSON-LD), and `/llms.txt`. What a shop doesn't do is stated as plainly as what it does, so assistants say "no" instead of guessing. | `/llms.txt`, `/shop/<shop>/llms.txt` |
-| 🔌 | **Connect your AI.** The shop's MCP URL, a live connection test, and setup steps for Claude, Claude Desktop, Claude Code, ChatGPT, and Cursor. | `/seller/connect` |
-| 🛍️ | **Storefront for humans.** The same catalog with **PayPal JS SDK v6** buttons. | `/shop/<shop>` |
-| 🧾 | **Seller agent.** Reviews buyers' refund requests against the shop policy, refunds within the rules, escalates the rest, adds tracking, and recommends how to answer disputes. The seller can also give it instructions in plain English. | `src/lib/agent/` |
-| ✅ | **Seller Inbox, live.** Approval queue for refunds over the limit, orders to ship, open disputes with response-deadline countdowns, and a filterable log of everything the agent did. New orders and agent actions slide in as they happen. | `/seller/inbox` |
-| 📊 | **Seller dashboard (AG Studio).** Net sales, order count, the share bought by AI assistants, open disputes, daily sales split by AI vs storefront, sales by assistant and by product, the agent's actions, and every order, all cross-filterable and editable in AG Studio's drag-and-drop editor. Updates live as orders and agent actions come in. Each shop's dashboard is saved (Studio state, per shop) as the seller or the AI changes it, with a one-click reset; the read-only demo shop saves per browser so judges don't change it for each other. | `/seller/dashboard` |
-| ⏱️ | **Custom AG Studio widgets.** A **dispute countdown** (every open PayPal dispute, soonest deadline first, ticking live, with the agent's recommendation) and a **live seller-agent feed** (refunds, tracking and dispute reviews as they happen, with done / needs you / blocked outcomes). Both query through Studio's data engine, so page filters and cross filters apply to them like any built-in chart. | `src/app/seller/dashboard/widgets.tsx` |
-| 🧠 | **Our PayPal agent inside AG Studio's Agent Framework.** "Ask AI" opens Studio's chat with our own team: a lead (Studio's built-in lead, extended) that delegates dashboard work to Studio's planning, data, page and widget agents and shop questions to **our PayPal seller agent**. That agent has custom tools (`api.defineAiTool`): `shop_briefing` (disputes by deadline, approvals waiting, orders to ship, refund headroom), `agent_activity`, `find_orders`, and `check_refund`, a dry run of the refund guardrails ("would this refund be automatic, need approval, or be blocked, and why?"). A custom `AgLlmAdapter` streams every turn through our server to Nebius, so no AI key reaches the browser. Expanding the agent's steps opens detail cards (refund verdict, disputes with time left, agent log, orders), and Studio's own agents can place our custom widgets ("add the dispute countdown and the agent feed here"). | `src/app/seller/dashboard/studio-ai.ts`, `src/app/api/seller/studio/` |
-| 🏪 | **Create your own shop.** Anyone can open a shop in about a minute: structured shop facts, optional sample products, and a password (scrypt-hashed). Each shop gets its own storefront, MCP server, seller agent, Inbox and AG Studio dashboard, all scoped to that shop. Rate-limited, product-capped, auto-deleted after 30 days. | `/start` |
-| ✏️ | **Products and Settings.** Edit, hide or delete products (products with orders can only be hidden, so history stays whole); change the facts AI quotes and the agent's auto-refund limit, with a live preview of exactly what assistants will say. Hidden products disappear from the storefront, MCP search and `get_product`. The demo shop is read-only on the hosted site so every judge sees the same demo. | `/seller/products`, `/seller/settings` |
-| 👀 | **Your shop through AI's eyes.** An AI-readiness score that flags facts an assistant would have to guess (no size, no shipping countries), the exact data assistants receive, and a box to ask the shop questions like a shopper would. | `/seller/ai-view` |
-| 🔔 | **Webhooks.** Verified PayPal webhooks keep orders, refunds, and disputes in sync, even when the buyer closes the tab before returning, or the seller refunds in PayPal directly. | `/api/webhooks/paypal` |
+---
 
-## PayPal APIs and SDKs used
+**AgentShelf** turns any small shop into one that AI assistants can shop in. An assistant like Claude or ChatGPT can search the shop, ask the seller questions, and buy through a **PayPal order the human approves**. After the sale, the shop's own **seller agent** handles refunds, shipment tracking and disputes, but only inside limits the seller sets.
 
-| PayPal product | How AgentShelf uses it | Code |
-| --- | --- | --- |
-| **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, AI SDK adapter) | The seller agent's read-only tools: `get_order`, `get_refund`, `get_shipment_tracking`, `list_disputes`, `get_dispute`, `list_transactions`, `get_merchant_insights`, `list_products`, `show_product_details`, `list_invoices`, `get_invoice`. `create_product` publishes listings to the catalog. | `src/lib/paypal/toolkit.ts` |
-| **Orders v2** (`@paypal/paypal-server-sdk`) | Create orders for AI and human buyers (`custom_id` tags the channel and assistant), capture on return, read orders, add shipment tracking. | `src/lib/paypal/client.ts` |
-| **Payments v2** | Refund captures, with the agent action id as `PayPal-Request-Id` so a retry can never refund twice. | `src/lib/paypal/client.ts` |
-| **Catalog Products** | Products created from photo onboarding (via the toolkit). | `src/lib/listings.ts` |
-| **Shipment Tracking** | Tracking attached to the PayPal order; PayPal notifies the buyer. | `src/lib/agent/actions.ts` |
-| **Disputes** | Dispute webhooks feed the Inbox; the agent reads disputes and recommends a response. | `src/lib/webhooks.ts` |
-| **Webhooks** | `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.REFUNDED`, `CUSTOMER.DISPUTE.CREATED/UPDATED/RESOLVED`. Signatures verified (CRC32 + RSA-SHA256 against PayPal's cert), each event processed once. | `src/lib/paypal/webhooks.ts` |
-| **JS SDK v6** (`@paypal/react-paypal-js/sdk-v6`) | Storefront checkout buttons, with eligibility checks for Venmo and Pay Later. | `src/app/shop/[slug]/checkout.tsx` |
+<p align="center"><b><i>"Find me a cozy candle under $30. Is it soy wax? Buy it."</i></b><br><sub>The shopper approves the PayPal payment, and the order appears in the seller's Inbox seconds later.</sub></p>
 
-Everything runs against the PayPal **sandbox**; the app refuses to start against live.
+| 🤖 **Buyable by AI** | 💳 **Paid with PayPal** | 🧑‍💼 **Run by your agent** |
+|:---|:---|:---|
+| One connector puts every shop in Claude, ChatGPT and any MCP app, with product cards and a Buy button right in the chat. | Every purchase is a real PayPal order (sandbox) the shopper approves. Capture, refunds, tracking and disputes all go through PayPal. | A seller agent refunds within your limits, adds tracking, and drafts dispute replies. Anything bigger waits for your one-click approval. |
 
-## How AI is used
+<table>
+  <tr>
+    <td align="center" width="25%"><h3>1</h3><sub>MCP connector for<br>every shop (plus one per shop)</sub></td>
+    <td align="center" width="25%"><h3>8</h3><sub>PayPal APIs and SDKs,<br>each doing real work</sub></td>
+    <td align="center" width="25%"><h3>5</h3><sub>AI agents (ours + AG Studio's)<br>building one dashboard page</sub></td>
+    <td align="center" width="25%"><h3>~2 s</h3><sub>for a shopper's question, answered<br>from the seller's own facts</sub></td>
+  </tr>
+</table>
+<p align="center"><sub>Measured on the live site, Nov 1 2026. Market lookups through Channel3 took 1.5–4.5 s per photo.</sub></p>
 
-| Job | Model (via Nebius Token Factory) | Code |
-| --- | --- | --- |
-| Seller agent: tool calling over PayPal + shop data | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/lib/agent/seller-agent.ts` |
-| Photo → listing (vision, structured output), priced against the market | `moonshotai/Kimi-K3` + [Channel3](https://trychannel3.com) image search | `src/lib/listings.ts`, `src/lib/channel3.ts` |
-| AG Studio dashboard agents (our lead + PayPal seller agent + Studio's built-ins) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/app/seller/dashboard/studio-ai.ts` |
-| Answering shopper questions from the policy only (`ask_seller`) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/lib/shop.ts` |
+## 📸 See it in 5 minutes
 
-Models were chosen by testing on our own tasks: a refund the policy covers, one it doesn't (used candle, "scent too strong"), reviewing real disputes with all 17 tools, and grounded Q&A where the honest answer is "not sure". All AI calls go through one OpenAI-compatible module (`src/lib/ai.ts`) with a fallback provider, built on the [Vercel AI SDK](https://ai-sdk.dev). Any compatible provider or model is an environment-variable change.
+**1 · A shop anyone can buy from, people or AI.** The storefront has PayPal buttons for people, and a shop address to paste into Claude or ChatGPT for AI shoppers.
 
-## Guardrails: the agent can't go rogue with money
+<p align="center">
+  <img src="docs/screens/storefront.jpg" alt="Maya's Candles storefront: photo product cards with Buy buttons and a strip with the shop's MCP address for AI assistants" width="74%">
+  <img src="docs/screens/storefront-mobile.jpg" alt="The storefront on a phone" width="24%">
+</p>
 
-The model never gets PayPal's raw `create_refund`, `accept_dispute_claim`, or invoice-sending tools. Money moves only through `refund_order`, which runs these rules in code (`src/lib/agent/guardrails.ts`, unit-tested):
+**2 · The seller's Inbox.** Refunds the agent did by itself, the ones over the limit waiting for approval, PayPal disputes with deadlines, and orders to ship. It updates live as orders arrive.
 
-- Refunds up to the seller's limit ($30 for Maya) run automatically; larger ones wait in the Inbox for one-click approval.
-- At most $100 of automatic refunds per day; past that, everything waits for the seller.
-- Never more than what's left on the order. Never on an order in dispute, unpaid, or already refunded.
-- The agent never turns a buyer down on its own. When the policy doesn't clearly cover a request, it escalates with a recommendation.
-- Buyers' assistants can request refunds only with the email the buyer paid with, and nothing is charged until the buyer approves the payment in PayPal.
-- Every action is logged with the agent's reason, including blocked and failed ones.
+<p align="center"><img src="docs/screens/inbox.jpg" alt="Seller Inbox: agent instructions box, approvals, open disputes with response deadlines" width="100%"></p>
 
-## Architecture
+**3 · The dashboard, built with AG Studio.** Sales from AI assistants vs the storefront, which assistant sold what, a live **PayPal dispute countdown** and a live **feed of the agent's actions**. Our two custom widgets sit next to Studio's charts.
+
+<p align="center"><img src="docs/screens/dashboard.jpg" alt="AG Studio dashboard: KPIs, sales by day split by AI vs storefront, the dispute countdown widget, the live agent feed, sales by assistant and by product" width="100%"></p>
+
+**4 · Ask the dashboard.** *"Would a refund on Priya's order be automatic?"* Studio's lead agent hands the question to **our PayPal seller agent**, which checks the real refund rules. Expand the step to see the verdict card.
+
+<p align="center"><img src="docs/screens/ask-ai-refund.jpg" alt="Ask AI chat: the PayPal seller agent's refund check opens into a red 'Blocked' verdict card with the reason and the rules" width="100%"></p>
+
+**5 · Studio's agents build pages with our widgets.** *"Add the dispute countdown and the agent feed side by side."* AG Studio's Page agent places **our** custom widgets on an empty page, live, and the page is saved.
+
+<p align="center">
+  <img src="docs/screens/ask-ai-watch-chat.jpg" alt="The chat while AG Studio's Page agent places the AgentShelf widgets" width="49%">
+  <img src="docs/screens/watch-page.jpg" alt="The finished Watch page: live dispute countdown next to the live agent feed" width="49%">
+</p>
+
+**6 · Add products from a photo, priced against the market.** AI writes the listing, and **Channel3** finds similar products for sale online, so the suggested price comes with a real market range and examples.
+
+<p align="center"><img src="docs/screens/add-product-channel3.jpg" alt="Add products: an AI-drafted listing for a turquoise mug with a market price box from Channel3 and four similar mugs from real stores" width="100%"></p>
+
+**7 · See your shop the way AI sees it.** An AI-readiness score flags facts an assistant would have to guess, and you can ask questions like a shopper would.
+
+<p align="center"><img src="docs/screens/ai-view.jpg" alt="AI's view: 96% AI-ready, ask like a shopper, and the exact policy lines assistants receive" width="100%"></p>
+
+**8 · Anyone can open a shop in a minute,** with sample products that fit what they sell. Their shop joins the marketplace connector straight away.
+
+<p align="center">
+  <img src="docs/screens/create-shop.jpg" alt="Create your shop: name, what you sell, the facts AI will quote, and a password" width="49%">
+  <img src="docs/screens/connect.jpg" alt="Connect your AI: the AgentShelf marketplace connector and the shop's own connector" width="49%">
+</p>
+
+## 🧩 The problem
+
+AI assistants are becoming shoppers: people now ask Claude or ChatGPT to find and buy things for them. Today those assistants can only buy from big retailers with big engineering teams.
+
+- 🛍️ **Small shops are invisible to AI shoppers.** A candle maker or potter has no way to be found, questioned or paid inside a chat.
+- 🤥 **When an assistant doesn't know, it guesses.** "Do you ship to Canada?" gets a confident wrong answer, and the seller pays for it.
+- ⏳ **More orders means more after-sale work.** Refunds, tracking and dispute deadlines don't scale for a one-person shop.
+- 💸 **Letting an AI touch money is scary** unless the seller sets hard limits it can't cross.
+
+**AgentShelf is the missing layer for small sellers:** a shop AI can buy from, facts AI can't get wrong, PayPal for every payment, and an agent that works inside the seller's rules.
+
+We call it **two front doors**: every shop is beautiful for people **and** crystal-clear for AI, from one source of truth.
+
+## ⚙️ How it works
+
+| | Step | What happens |
+|:-:|---|---|
+| 1 | **Open a shop** · `/start` | Name, what you sell, and the facts AI will quote (where you ship, returns, materials). Add products from photos. |
+| 2 | **AI shoppers find it** · `/api/mcp` | One **AgentShelf marketplace** connector searches every shop; each shop also has its own at `/api/mcp/<shop>`. |
+| 3 | **They ask** | `ask_seller` answers only from the seller's own facts. If the shop doesn't ship to Canada, the answer is "No", never a guess. |
+| 4 | **They buy** | `create_checkout` makes a **PayPal order**; the shopper approves it in PayPal; we capture it and the order lands in the seller's Inbox. |
+| 5 | **The agent follows up** | Small refunds happen automatically, bigger ones wait for approval, tracking goes onto the PayPal order, and disputes get a recommended reply. |
+| 6 | **The seller watches** | Inbox and an AG Studio dashboard, both live. Ask the dashboard anything; our agent and Studio's agents answer together. |
 
 ```mermaid
 flowchart LR
   subgraph Buyers
-    AI["AI assistants<br/>Claude · ChatGPT · Cursor"]
-    H["Human shoppers"]
+    AI["🤖 AI assistants<br/>Claude · ChatGPT · Cursor"]
+    H["🧑 People"]
   end
-  subgraph AgentShelf["AgentShelf (Next.js on Render)"]
-    MCP["Per-shop MCP server<br/>/api/mcp/:shop"]
+  subgraph AgentShelf["AgentShelf · Next.js on Render"]
+    MP["Marketplace MCP<br/>/api/mcp"]
+    MCP["Per-shop MCP<br/>/api/mcp/:shop"]
     SF["Storefront<br/>PayPal JS SDK v6"]
-    SHOP["Shop logic<br/>checkout · capture · Q&A"]
-    AGENT["Seller agent<br/>AI SDK + Agent Toolkit"]
+    SHOP["Shop logic<br/>facts · checkout · capture"]
+    AGENT["Seller agent<br/>+ PayPal Agent Toolkit"]
     GUARD["Guardrails<br/>limits · approvals · log"]
-    UI["Seller app<br/>Inbox · Dashboard (AG Studio + agents) · Add products · AI's view"]
-    WH["Webhook handler<br/>verified, idempotent"]
-    DB[("Postgres<br/>orders · actions · disputes")]
+    UI["Seller app<br/>Inbox · AG Studio dashboard"]
+    DB[("Postgres")]
   end
-  LLM["Nebius Token Factory<br/>DeepSeek · Kimi"]
-  PP["PayPal sandbox<br/>Orders · Payments · Catalog<br/>Tracking · Disputes"]
+  PP["💳 PayPal<br/>Orders · Payments · Tracking<br/>Disputes · Catalog · Webhooks"]
+  LLM["🧠 Nebius<br/>Token Factory"]
+  C3["🔎 Channel3<br/>image search"]
 
+  AI --> MP --> SHOP
   AI --> MCP --> SHOP
   H --> SF --> SHOP
   SHOP --> PP
   SHOP --> DB
-  MCP -- request_refund --> AGENT
-  UI --> AGENT
-  UI -- Studio agents via LLM proxy --> LLM
+  PP -- verified webhooks --> DB
+  UI --> AGENT --> GUARD --> PP
   AGENT --> LLM
-  AGENT -- read-only tools --> PP
-  AGENT --> GUARD --> PP
-  GUARD --> DB
-  PP -- webhooks --> WH --> DB
-  WH -- new dispute --> AGENT
+  UI -- Studio agents --> LLM
+  UI -- photo → listing --> C3
 ```
 
-## Try it
+## 💳 PayPal
 
-**Hosted demo:** https://agentshelf-xsh7.onrender.com (Render, PayPal sandbox)
+PayPal is the payment layer for every sale, refund and dispute, and the seller agent works through the **PayPal Agent Toolkit**.
 
-- **Marketplace MCP (every shop, one connector):** `https://agentshelf-xsh7.onrender.com/api/mcp` (add it as a custom connector in Claude, or any MCP client)
-- Demo shop's own MCP server: `https://agentshelf-xsh7.onrender.com/api/mcp/mayas-candles`
-- For AI assistants: [`/llms.txt`](https://agentshelf-xsh7.onrender.com/llms.txt)
+| PayPal product | How AgentShelf uses it | Code |
+| --- | --- | --- |
+| **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, AI SDK adapter) | The seller agent's read-only tools: `get_order`, `get_refund`, `get_shipment_tracking`, `list_disputes`, `get_dispute`, `list_transactions`, `get_merchant_insights`, `list_products`, `show_product_details`, `list_invoices`, `get_invoice`. `create_product` publishes listings to the catalog. | [`src/lib/paypal/toolkit.ts`](src/lib/paypal/toolkit.ts) |
+| **Orders v2** (`@paypal/paypal-server-sdk`) | Orders for AI and human buyers (`custom_id` tags the channel and the assistant), capture on return, shipment tracking. `brand_name` is the shop's name. | [`src/lib/paypal/client.ts`](src/lib/paypal/client.ts) |
+| **Payments v2** | Refunds, with the agent action id as `PayPal-Request-Id` so a retry can never refund twice. | [`src/lib/paypal/client.ts`](src/lib/paypal/client.ts) |
+| **Catalog Products** | Every product added from a photo is created in the PayPal catalog. | [`src/lib/listings.ts`](src/lib/listings.ts) |
+| **Shipment Tracking** | Tracking attached to the PayPal order; PayPal emails the buyer. | [`src/lib/agent/actions.ts`](src/lib/agent/actions.ts) |
+| **Disputes** | Dispute webhooks feed the Inbox and the dashboard countdown; the agent reads each dispute and recommends a reply. | [`src/lib/webhooks.ts`](src/lib/webhooks.ts) |
+| **Webhooks** | `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED/REFUNDED`, `CUSTOMER.DISPUTE.CREATED/UPDATED/RESOLVED`. Signatures verified (CRC32 + RSA-SHA256 against PayPal's certificate), each event processed once. | [`src/lib/paypal/webhooks.ts`](src/lib/paypal/webhooks.ts) |
+| **JS SDK v6** (`@paypal/react-paypal-js/sdk-v6`) | Storefront buttons, with eligibility checks for Venmo and Pay Later. | [`src/app/shop/[slug]/checkout.tsx`](src/app/shop/%5Bslug%5D/checkout.tsx) |
 
-**Create your own shop** at [`/start`](https://agentshelf-xsh7.onrender.com/start): name it, pick the facts assistants will quote (where you ship, returns, materials), choose a password, and optionally start with three sample products. In about a minute you get your own storefront, your own MCP server, a seller agent, and the AG Studio dashboard. Demo shops run in the PayPal sandbox, share AgentShelf's sandbox business account for payments, and are deleted after 30 days.
+Everything runs against the PayPal **sandbox**; the app refuses to start against live. Tested end to end on the live site: an AI purchase from Claude, PayPal capture, the order in the Inbox, marked shipped, and PayPal's tracking email to the buyer.
 
-**Connect your AI to the demo shop:** open `/seller/connect` for the MCP URL and setup steps. Then ask your assistant something like:
+## 📊 AG Studio
 
-> I'm looking for a cozy candle under $30 as a gift from Maya's Candles. Ask the seller if it's soy wax, then check out the best one for me.
+The seller dashboard is an **AG Studio** report, used the way the prize brief asks: custom widgets, theming, layout, and **our own agent working with Studio's built-in agents**.
 
-The assistant returns a PayPal link; approve it with a PayPal **sandbox** buyer account (login details are in the Devpost submission).
+| What | How | Code |
+|---|---|---|
+| **Our PayPal seller agent inside Studio's team** | A `directLlmRunner` agent with custom tools from `api.defineAiTool`: `shop_briefing`, `agent_activity`, `find_orders`, and `check_refund` (a dry run of the real refund guardrails). Read-only: money only moves from the Inbox. | [`studio-ai.ts`](src/app/seller/dashboard/studio-ai.ts) |
+| **Our own lead** | Studio's built-in lead, extended with `tools.delegateTo([planning, data, page, widget, seller])`, so one conversation can ask our agent for facts and Studio's agents for charts. | [`studio-ai.ts`](src/app/seller/dashboard/studio-ai.ts) |
+| **Our model connection** | A custom `AgLlmAdapter` streams every turn through our server ([`/api/seller/studio/llm`](src/app/api/seller/studio/llm/route.ts)) to Nebius, translating Studio's requests to chat completions and the reply to AG-UI events. No AI key reaches the browser, and a backup model takes over if one is configured. | [`chat-completions.ts`](src/lib/studio-agent/chat-completions.ts) |
+| **Two custom widgets** | **Dispute countdown** (ticks live, amber under 3 days, red under 1) and **seller agent feed** (new actions slide in). They query through Studio's data engine, so page filters and cross filters apply, and they carry AI metadata so **Studio's agents can place them**. | [`widgets.tsx`](src/app/seller/dashboard/widgets.tsx) |
+| **Detail cards in the chat** | Expanding our agent's steps opens a refund verdict, disputes with time left, the agent's log, or matching orders (`aiToolDisplay`). | [`tool-details.tsx`](src/app/seller/dashboard/tool-details.tsx) |
+| **Theme and layout** | A full candlelit theme (`studioTheme.withParams`), a designed overview page, and a **Watch** page to build with AI. Prompt starters and a model picker in the chat. | [`studio-canvas.tsx`](src/app/seller/dashboard/studio-canvas.tsx), [`report.ts`](src/app/seller/dashboard/report.ts) |
+| **Saved per shop** | Studio state is saved as the seller or the AI changes it, with one-click reset. The read-only demo shop saves per browser, so judges don't change it for each other. | [`studio-canvas.tsx`](src/app/seller/dashboard/studio-canvas.tsx) |
+| **Data the AI understands** | Four tables with relationships, and plain descriptions on tables and fields ("Paid = waiting to ship"), so Studio's agents filter correctly instead of guessing. Updates live. | [`dashboard-data.ts`](src/lib/dashboard-data.ts) |
 
-**Seller side** (`/seller/*`: Inbox, Dashboard, Add products, AI's view, Connect your AI): sign in to Maya's Candles with the demo password (also in the Devpost submission), or to a shop you created with its own password. Locally, leave `SELLER_DEMO_PASSWORD` empty and it opens without one.
+On the live site, one click on **"Build a live watch page"** had five agents work together: Studio's lead asked our PayPal agent for the live disputes and approvals, Studio's Planning agent designed the page, the Page agent placed nine widgets (our countdown as the main one), and Widget agents configured the rest.
 
-## Run it locally
+## 🔎 Channel3
+
+When a seller adds a product from a photo, the photo goes to **Channel3 image search** ([`src/lib/channel3.ts`](src/lib/channel3.ts)). Each match's cheapest US-dollar offer gives a **market range and median** (with the extremes trimmed), and the four most typical matches are shown with their photos, prices and stores. The range goes into the listing AI's prompt, so the suggested price is argued against real prices, e.g. *"At $46 it sits just above the $44 median for similar mugs."* When there are too few matches, the screen says so instead of guessing. One credit per photo.
+
+## ☁️ Render
+
+AgentShelf runs on **Render** from a Blueprint ([`render.yaml`](render.yaml)): a Node web service and a managed Postgres database. Every push to `main` deploys automatically. Before each deploy goes live, Render runs the database migrations, seeds the demo shop if missing, backfills demo data, and deletes expired visitor shops, so a deploy never needs a manual step.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/zaxcoraider/AgentShelf)
+
+## 🧠 How AI is used
+
+| Job | Model (via Nebius Token Factory) | Code |
+| --- | --- | --- |
+| Seller agent: tool calling over PayPal and shop data | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | [`seller-agent.ts`](src/lib/agent/seller-agent.ts) |
+| Answering shopper questions from the policy only (`ask_seller`) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | [`shop.ts`](src/lib/shop.ts) |
+| AG Studio dashboard agents (our lead, our PayPal agent, Studio's built-ins) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | [`studio-ai.ts`](src/app/seller/dashboard/studio-ai.ts) |
+| Photo → listing (vision, structured output), priced with Channel3 | `moonshotai/Kimi-K3` | [`listings.ts`](src/lib/listings.ts) |
+
+Models were picked by testing on our own tasks: streamed tool calls and strict JSON. When Nebius deprecated our first model on Nov 1, we benchmarked four replacements and moved to the fastest (0.5–0.7 s per tool call). All AI calls go through one OpenAI-compatible module ([`src/lib/ai.ts`](src/lib/ai.ts)) with a fallback provider, so changing models is a settings change.
+
+**Facts AI can't get wrong.** Each shop's shipping, returns and materials are structured fields ([`shop-facts.ts`](src/lib/shop-facts.ts)), served the same way to people (storefront), assistants (`get_shop_policy`, `ask_seller`), search engines (schema.org JSON-LD) and [`/llms.txt`](https://agentshelf-xsh7.onrender.com/llms.txt). What a shop doesn't do is stated as plainly as what it does.
+
+## 🛡 Guardrails
+
+The agent can't go rogue with money. The model never gets PayPal's raw `create_refund`, `accept_dispute_claim` or invoice-sending tools. Money moves only through `refund_order`, which runs these rules in code ([`guardrails.ts`](src/lib/agent/guardrails.ts), unit-tested):
+
+- Refunds up to the seller's limit ($30 for Maya, editable in Settings) run automatically; larger ones wait in the Inbox for one-click approval.
+- At most $100 of automatic refunds per day; past that, everything waits for the seller.
+- Never more than what's left on the order. Never on an order in dispute, unpaid, or already refunded.
+- The agent never turns a buyer down on its own. When the policy doesn't clearly cover a request, it escalates with a recommendation.
+- A buyer's assistant can request a refund only with the email the buyer paid with, and nothing is charged until the buyer approves the payment in PayPal.
+- Every action is logged with the agent's reason, including blocked and failed ones.
+
+## 🚀 Try it
+
+| | |
+|---|---|
+| 🧭 **Judge's guide** | **[/judges](https://agentshelf-xsh7.onrender.com/judges)**: four short paths (buyer, AI assistant, seller, your own shop) and where every feature lives. |
+| 🛍 **As a buyer** | Open **[Maya's Candles](https://agentshelf-xsh7.onrender.com/shop/mayas-candles)** and buy with the PayPal **sandbox** buyer (login in the Devpost submission). |
+| 🤖 **Through Claude or ChatGPT** | Add `https://agentshelf-xsh7.onrender.com/api/mcp` as a custom connector, then ask: *"Find me a handmade gift under $40 on AgentShelf, ask the seller if they ship to Canada, then check out the best one."* |
+| 🧑‍💼 **As the seller** | **[Seller sign-in](https://agentshelf-xsh7.onrender.com/signin)** as Maya (password in the Devpost submission): Inbox, Dashboard → **Ask AI**, Products, Settings. |
+| 🏪 **With your own shop** | **[Create your shop](https://agentshelf-xsh7.onrender.com/start)** in a minute and try editing everything. |
+
+Demo shops run in the PayPal sandbox: no real money moves. The demo shop is read-only on the live site, so every judge sees the same demo.
+
+## 🗺 Roadmap
+
+<table>
+  <tr>
+    <th width="33%">✅ Shipped</th>
+    <th width="33%">🔜 Next · Nov–Dec 2026</th>
+    <th width="34%">🧭 2027</th>
+  </tr>
+  <tr valign="top">
+    <td>
+      • Marketplace MCP for every shop + one per shop<br>
+      • Product cards with Buy with PayPal in chat (MCP Apps)<br>
+      • PayPal orders, capture, refunds, tracking, disputes, catalog, webhooks<br>
+      • Seller agent with guardrails and an approval Inbox<br>
+      • AG Studio dashboard with our agent in Studio's team<br>
+      • Photo → listing with Channel3 market prices<br>
+      • Create your own shop, products and settings<br>
+      • Facts AI can't get wrong: MCP, JSON-LD, llms.txt<br>
+      • Live on Render, deployed on every push
+    </td>
+    <td>
+      • <b>Sellers paid directly</b>: each shop connects its own PayPal account through PayPal's platform onboarding<br>
+      • <b>Agent answers disputes with evidence</b>, after the seller approves<br>
+      • <b>Invoices for custom orders</b> drafted by the agent<br>
+      • <b>Market watch</b>: your prices vs the market, weekly (Channel3)<br>
+      • <b>Morning brief</b> from the seller agent (Render cron)
+    </td>
+    <td>
+      • Listing in the Claude and ChatGPT app directories<br>
+      • Pilot with real independent sellers<br>
+      • Import from Etsy and Shopify<br>
+      • More currencies and countries<br>
+      • A fee on AI-assisted sales plus a seller subscription
+    </td>
+  </tr>
+</table>
+
+## 🛠 Run locally
 
 Needs Node.js 22+ and a PayPal developer account (sandbox). No database install: locally AgentShelf uses PGlite, an embedded Postgres stored in `.data/`.
 
@@ -132,31 +288,64 @@ npm run db:setup        # creates the tables and the Maya's Candles demo shop
 npm run dev             # http://localhost:3000
 ```
 
-The shop, MCP server, and checkout work with PayPal keys alone. The seller agent, photo → listing, and AI answers turn on when `AI_BASE_URL`, `AI_API_KEY`, and the `AI_MODEL_*` variables are set (see `.env.example`).
+The shop, MCP servers and checkout work with PayPal keys alone. The seller agent, photo → listing, AI answers and the dashboard's Ask AI turn on with `AI_BASE_URL`, `AI_API_KEY` and the `AI_MODEL_*` variables. Market prices need `CHANNEL3_API_KEY`; the AG Studio watermark goes away with `AG_STUDIO_LICENSE_KEY`.
 
-Useful scripts:
+<details>
+<summary><b>Useful scripts</b></summary>
 
 | Script | What it does |
 | --- | --- |
-| `npm test` | Unit tests (guardrails, webhook parsing) |
+| `npm test` | Unit tests (guardrails, webhook parsing, market price maths) |
+| `npm run smoke:ai` | Text, streaming, structured output, tool calling and vision against the configured models |
 | `npm run smoke:mcp` | Shops like an AI assistant against the running app, ending with a real sandbox order |
 | `npm run smoke:seller-agent -- --mock` | Checks the agent's tools and guardrails with a scripted model (no AI key needed) |
 | `npm run smoke:seller-agent` | The real model reviews the shop's open disputes |
 | `npm run smoke:webhook` | Replays sample PayPal webhooks against the local database |
 | `npm run db:seed -- --reset` | Rebuilds the demo shop from scratch |
 
-## Deploy
+</details>
 
-`render.yaml` is a Render Blueprint: a Node web service plus Postgres, with migrations and the demo seed running before each deploy. In Render choose **New → Blueprint**, pick this repo, and fill in the PayPal and AI variables. Then register `https://<your-app>/api/webhooks/paypal` in the PayPal developer dashboard and set `PAYPAL_WEBHOOK_ID`.
+<details>
+<summary><b>Deploy your own</b></summary>
 
-## Built with
+Use the **Deploy to Render** button above, or in Render choose **New → Blueprint** and pick this repo. Fill in the PayPal and AI variables. Then register `https://<your-app>/api/webhooks/paypal` in the PayPal developer dashboard (or run `npm run paypal:webhook -- <url>`) and set `PAYPAL_WEBHOOK_ID`.
 
-Next.js 15 · React 19 · Tailwind CSS 4 · Motion · Vercel AI SDK · Model Context Protocol TypeScript SDK + MCP Apps · AG Studio · PayPal Agent Toolkit · PayPal Server SDK · PayPal JS SDK v6 · Drizzle ORM · Postgres / PGlite · Nebius Token Factory · Render
+</details>
 
-## Credits
+<details>
+<summary><b>Project layout</b></summary>
 
-Demo product photos for the seeded shop are from [Unsplash](https://unsplash.com) (see [`scripts/seed-photos/CREDITS.md`](scripts/seed-photos/CREDITS.md)).
+```
+src/app/                pages: home, /start, /signin, /judges, /shop/<shop>, /checkout/return
+src/app/seller/         Inbox, Dashboard (AG Studio), Products, Add products, AI's view, Connect, Settings
+src/app/api/mcp/        marketplace MCP (route.ts) and per-shop MCP ([slug]/route.ts)
+src/app/api/seller/     dashboard data + state, Studio LLM proxy and tools, live Inbox
+src/lib/mcp/            MCP servers and the product-card widget (MCP Apps)
+src/lib/agent/          seller agent, guarded actions, guardrails
+src/lib/paypal/         PayPal client, Agent Toolkit adapter, webhook verification
+src/lib/studio-agent/   AG Studio agent tools and the chat-completions translator
+src/lib/                shop logic, shop facts, marketplace, Channel3, listings, AI module
+scripts/                seed, migrations, smoke tests, demo photos (credited)
+```
 
-## License
+</details>
 
-[MIT](LICENSE)
+## 🔐 Security and privacy
+
+- **Keys stay on the server.** PayPal, AI and Channel3 keys never reach the browser; the dashboard's AI runs through our own proxy.
+- **Sandbox only.** The app refuses to start against live PayPal.
+- **Verified webhooks.** Every PayPal webhook signature is checked, and each event is processed once.
+- **Passwords are hashed** (scrypt); sign-in helpers can't be called from outside the server.
+- **Every seller action is scoped to its own shop**, and every agent action is logged with its reason.
+- **Demo limits:** 3 new shops per visitor per day, 100 per day site-wide, 20 products per shop, and visitor shops are deleted after 30 days.
+
+## 🙏 Credits
+
+Demo product photos are from [Unsplash](https://unsplash.com) (see [`scripts/seed-photos/CREDITS.md`](scripts/seed-photos/CREDITS.md)). Built with Next.js 15, React 19, Tailwind CSS 4, Motion, the Vercel AI SDK, the MCP TypeScript SDK + MCP Apps, AG Studio, the PayPal Agent Toolkit, PayPal Server SDK and JS SDK v6, Drizzle ORM, Postgres / PGlite, Nebius Token Factory, Channel3 and Render.
+
+---
+
+<p align="center">
+  <img src="public/brand/agentshelf-icon.svg" alt="" width="40"><br>
+  <sub>Built for <a href="https://paypalaihackathon.devpost.com"><b>Build What's Next with PayPal and AI</b></a> · <a href="LICENSE">MIT License</a></sub>
+</p>
