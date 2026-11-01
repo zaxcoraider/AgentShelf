@@ -151,7 +151,7 @@ export async function checkRefund(seller: Seller, orderRef: string, amountDollar
     return { error: matches.length ? "That ref matches more than one order; use more characters." : `No order ${orderRef}. Use find_orders first.` };
   }
   const order = matches[0];
-  const refundedToday = await autoRefundedToday(seller.id);
+  const [refundedToday, titles] = await Promise.all([autoRefundedToday(seller.id), productTitles(seller.id)]);
   const amountCents = amountDollars != null ? Math.round(amountDollars * 100) : undefined;
   const decision = decideRefund({ seller, order, amountCents, autoRefundedTodayCents: refundedToday });
   const verdict = {
@@ -160,7 +160,7 @@ export async function checkRefund(seller: Seller, orderRef: string, amountDollar
     blocked: "The rules would refuse this refund.",
   }[decision.kind];
   return {
-    order: orderLine(order),
+    order: orderLine(order, order.productId ? titles.get(order.productId) : null),
     verdict,
     amount: "amountCents" in decision ? usd(decision.amountCents) : undefined,
     why: decision.why,

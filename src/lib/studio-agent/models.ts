@@ -7,7 +7,7 @@ import type { Provider } from "./chat-completions";
 
 export type StudioModelSlot = "primary" | "fallback";
 
-/** "deepseek-ai/DeepSeek-V4.1-Flash" → "DeepSeek V4.1 Flash" */
+/** "deepseek-ai/DeepSeek-V4.1-Flash-1017" → "DeepSeek V4.1 Flash 1017" */
 const label = (model: string) => model.split("/").pop()!.replace(/-/g, " ");
 
 export function studioProviders(): Partial<Record<StudioModelSlot, Provider>> {

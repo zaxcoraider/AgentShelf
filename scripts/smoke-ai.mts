@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 /**
  * Day-1 check that the AI gateway supports everything AgentShelf needs.
  * Run: npm run smoke:ai
@@ -6,9 +7,10 @@ import { generateText, Output, stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import { getModel, type AiTask } from "../src/lib/ai";
 
-const IMAGE_URL =
-  process.argv[2] ??
-  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Candle_flame_%281%29.jpg/480px-Candle_flame_%281%29.jpg";
+// A seed photo (see scripts/seed-photos/CREDITS.md) unless an image URL is passed, so the check needs no network fetch.
+const IMAGE = process.argv[2]
+  ? new URL(process.argv[2])
+  : readFileSync(new URL("./seed-photos/cedar-smoke-soy-candle.jpg", import.meta.url));
 
 async function check(name: string, task: AiTask, fn: () => Promise<string>) {
   const started = Date.now();
@@ -75,7 +77,7 @@ const results = [
           role: "user",
           content: [
             { type: "text", text: "Describe this product photo in one short sentence." },
-            { type: "image", image: new URL(IMAGE_URL) },
+            { type: "image", image: IMAGE, mediaType: "image/jpeg" },
           ],
         },
       ],

@@ -45,9 +45,9 @@ Everything runs against the PayPal **sandbox**; the app refuses to start against
 
 | Job | Model (via Nebius Token Factory) | Code |
 | --- | --- | --- |
-| Seller agent: tool calling over PayPal + shop data | `deepseek-ai/DeepSeek-V4.1-Flash` | `src/lib/agent/seller-agent.ts` |
+| Seller agent: tool calling over PayPal + shop data | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/lib/agent/seller-agent.ts` |
 | Photo → listing (vision, structured output) | `moonshotai/Kimi-K3` | `src/lib/listings.ts` |
-| Answering shopper questions from the policy only (`ask_seller`) | `deepseek-ai/DeepSeek-V4.1-Flash` | `src/lib/shop.ts` |
+| Answering shopper questions from the policy only (`ask_seller`) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/lib/shop.ts` |
 
 Models were chosen by testing on our own tasks: a refund the policy covers, one it doesn't (used candle, "scent too strong"), reviewing real disputes with all 17 tools, and grounded Q&A where the honest answer is "not sure". All AI calls go through one OpenAI-compatible module (`src/lib/ai.ts`) with a fallback provider, built on the [Vercel AI SDK](https://ai-sdk.dev). Any compatible provider or model is an environment-variable change.
 
