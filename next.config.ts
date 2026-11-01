@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   // The MCP product-card widget inlines this browser bundle, read from disk at runtime.
   outputFileTracingIncludes: {
     "/api/mcp/[slug]": ["./node_modules/@modelcontextprotocol/ext-apps/dist/src/app-with-deps.js"],
+    // Sample product photos that /start copies into a new shop.
+    "/start": ["./scripts/seed-photos/samples/*.jpg"],
   },
 };
 

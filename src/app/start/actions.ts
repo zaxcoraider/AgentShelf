@@ -1,6 +1,8 @@
 "use server";
 
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { and, count, eq, gte, inArray, lt } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -9,7 +11,8 @@ import type { ShopPolicy } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/passwords";
 import { DEMO_SELLER_SLUG } from "@/lib/seller";
 import { shopSlug, startSession } from "@/lib/seller-auth";
-import { SHIP_TO, START_LIMITS, type CreateShopState } from "./options";
+import { SHIP_TO, SHOP_KINDS, START_LIMITS, type CreateShopState, type ShopKind } from "./options";
+import { SAMPLE_PRODUCTS } from "./samples";
 
 /**
  * Create a visitor shop from the /start form, sign the browser in as it, and go to the welcome page.
@@ -31,9 +34,13 @@ export async function createShop(_prev: CreateShopState, form: FormData): Promis
   const processing = text(form, "processing") === "3-5" ? { min: 3, max: 5 } : { min: 1, max: 2 };
   const shippingCents = text(form, "shipping") === "free" ? 0 : 595;
   const returnsDays = { "30": 30, "14": 14, none: 0 }[text(form, "returns")] ?? 30;
-  const samples = form.get("samples") === "on";
+  const kind = (SHOP_KINDS.some((k) => k.id === text(form, "kind")) ? text(form, "kind") : "other") as ShopKind;
+  const samples = form.get("samples") === "on" && kind !== "other";
   const values = Object.fromEntries(
-    ["name", "ownerName", "tagline", "shipsFrom", "materials", "shipsTo", "processing", "shipping", "returns"].map((k) => [k, text(form, k)]),
+    ["name", "ownerName", "tagline", "shipsFrom", "materials", "shipsTo", "processing", "shipping", "returns", "kind"].map((k) => [
+      k,
+      text(form, k),
+    ]),
   );
   values.samples = samples ? "on" : "off";
 
@@ -105,7 +112,10 @@ export async function createShop(_prev: CreateShopState, form: FormData): Promis
     })
     .returning();
 
-  if (samples) await copySampleProducts(seller.id);
+  if (samples) {
+    if (kind === "candles") await copySampleProducts(seller.id);
+    else await addSampleProducts(seller.id, kind);
+  }
 
   await startSession(seller.slug);
   redirect("/seller/welcome");
@@ -154,3 +164,27 @@ async function copySampleProducts(sellerId: string) {
 }
 
 const SAMPLE_TITLES = ["Lavender Fields Soy Candle", "Citrus Grove Travel Tin", "Rainy Day Library Candle"];
+
+/** Three sample products for a ceramics, prints or jewelry shop, with their stock photos. */
+async function addSampleProducts(sellerId: string, kind: Exclude<ShopKind, "candles" | "other">) {
+  for (const p of SAMPLE_PRODUCTS[kind]) {
+    const [product] = await db
+      .insert(schema.products)
+      .values({
+        sellerId,
+        title: p.title,
+        description: p.description,
+        attributes: { scent: p.details, size: p.size },
+        priceCents: p.priceCents,
+        stock: 10,
+      })
+      .returning();
+    const photo = await readFile(path.join(process.cwd(), "scripts/seed-photos/samples", p.photo)).catch(() => null);
+    if (!photo) continue; // A missing photo leaves the drawn placeholder; the product still sells.
+    await db.insert(schema.productImages).values({ productId: product.id, mediaType: "image/jpeg", data: photo });
+    await db
+      .update(schema.products)
+      .set({ imageUrl: `/images/products/${product.id}` })
+      .where(eq(schema.products.id, product.id));
+  }
+}

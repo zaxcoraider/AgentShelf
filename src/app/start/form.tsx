@@ -1,7 +1,16 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { createShop } from "./actions";
+import { SHOP_KINDS, type ShopKind } from "./options";
+
+const SAMPLE_NOTE: Record<ShopKind, string> = {
+  ceramics: "A cup set, a mug and a serving bowl",
+  prints: "Three art prints",
+  jewelry: "Earrings, a necklace and a ring",
+  candles: "Three of Maya's candles",
+  other: "",
+};
 
 const input =
   "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-cream placeholder:text-smoke/60 outline-none transition focus:border-ember/70 focus:ring-2 focus:ring-ember/20";
@@ -10,6 +19,7 @@ export function StartForm() {
   const [state, action, pending] = useActionState(createShop, null);
   const err = (k: string) => state?.errors?.[k];
   const v = (k: string) => state?.values?.[k];
+  const [kind, setKind] = useState<ShopKind>((v("kind") as ShopKind) || "ceramics");
 
   return (
     <form action={action} className="space-y-7">
@@ -17,6 +27,26 @@ export function StartForm() {
         <Field id="name" label="Shop name" error={err("name")}>
           <input id="name" name="name" defaultValue={v("name")} required maxLength={40} placeholder="Juniper Ceramics" className={input} autoFocus />
         </Field>
+        <div role="radiogroup" aria-label="What do you sell?">
+          <p className="mb-1.5 text-sm font-medium text-cream">What do you sell?</p>
+          <div className="flex flex-wrap gap-2">
+            {SHOP_KINDS.map((k) => (
+              <label key={k.id} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="kind"
+                  value={k.id}
+                  checked={kind === k.id}
+                  onChange={() => setKind(k.id)}
+                  className="peer sr-only"
+                />
+                <span className="inline-block rounded-full border border-white/10 px-3.5 py-1.5 text-sm text-smoke transition peer-checked:border-amber-500/60 peer-checked:bg-amber-500/10 peer-checked:text-cream peer-focus-visible:ring-2 peer-focus-visible:ring-ember/40 hover:border-white/25">
+                  {k.label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="ownerName" label="Your first name" error={err("ownerName")}>
             <input id="ownerName" name="ownerName" defaultValue={v("ownerName")} required maxLength={40} placeholder="Sam" className={input} />
@@ -46,13 +76,21 @@ export function StartForm() {
         <Field id="password" label="Choose a password" hint="At least 8 characters" error={err("password")}>
           <input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" className={input} />
         </Field>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5">
-          <input type="checkbox" name="samples" defaultChecked={v("samples") !== "off"} className="mt-0.5 size-4 accent-amber-500" />
-          <span className="text-sm">
-            <span className="text-cream">Start with 3 sample products</span>
-            <span className="block text-smoke">Candles with photos, so you can try an AI purchase right away. Delete or add your own any time.</span>
-          </span>
-        </label>
+        {kind === "other" ? (
+          <p className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5 text-sm text-smoke">
+            Your shop starts empty. Add products from photos right after: AI drafts each listing for you.
+          </p>
+        ) : (
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5">
+            <input type="checkbox" name="samples" defaultChecked={v("samples") !== "off"} className="mt-0.5 size-4 accent-amber-500" />
+            <span className="text-sm">
+              <span className="text-cream">Start with 3 sample products</span>
+              <span className="block text-smoke">
+                {SAMPLE_NOTE[kind]}, with photos, so you can try an AI purchase right away. Add your own any time.
+              </span>
+            </span>
+          </label>
+        )}
       </Section>
 
       {state?.message && (

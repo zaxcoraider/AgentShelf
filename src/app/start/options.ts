@@ -6,6 +6,16 @@ export const SHIP_TO = {
   "us-ca-uk-au": ["US", "CA", "GB", "AU"],
 } as const satisfies Record<string, string[]>;
 
+/** What a new shop sells: picks its sample products (and "other" means none). */
+export const SHOP_KINDS = [
+  { id: "ceramics", label: "Ceramics" },
+  { id: "prints", label: "Prints & art" },
+  { id: "jewelry", label: "Jewelry" },
+  { id: "candles", label: "Candles" },
+  { id: "other", label: "Something else" },
+] as const;
+export type ShopKind = (typeof SHOP_KINDS)[number]["id"];
+
 export const START_LIMITS = {
   perVisitorPerDay: 3,
   sitePerDay: 100,
