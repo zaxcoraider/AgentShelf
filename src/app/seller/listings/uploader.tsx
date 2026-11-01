@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LIMITS } from "@/lib/listing-limits";
-import type { ListingDraft } from "@/lib/listings";
+import type { DraftedListing } from "@/lib/listings";
 import { draft, publish } from "./actions";
 
 type Item = {
@@ -10,7 +10,7 @@ type Item = {
   photo: Blob;
   preview: string;
   state: "drafting" | "ready" | "publishing" | "published" | "failed";
-  draft?: ListingDraft & { alreadySells?: string };
+  draft?: DraftedListing;
   message?: string;
   paypalProductId?: string;
 };
@@ -166,6 +166,7 @@ export function Uploader({ enabled, shopUrl }: { enabled: boolean; shopUrl: stri
                   </p>
                 )}
                 {item.draft?.priceReason && <p className="text-xs opacity-60">Price: {item.draft.priceReason}</p>}
+                {item.draft?.market && <MarketRange market={item.draft.market} />}
                 {item.message && <p className="text-sm text-red-700 dark:text-red-400">{item.message}</p>}
                 <button
                   disabled={item.state === "publishing"}
@@ -175,6 +176,40 @@ export function Uploader({ enabled, shopUrl }: { enabled: boolean; shopUrl: stri
                 </button>
               </form>
             )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** What similar products sell for right now (Channel3), under the suggested price. */
+function MarketRange({ market }: { market: NonNullable<DraftedListing["market"]> }) {
+  const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+      <p className="text-xs text-smoke">
+        <span className="text-cream">Market price</span> for similar products: {money(market.lowUsd)}–{money(market.highUsd)},
+        median <span className="text-cream">{money(market.medianUsd)}</span>
+        <span className="opacity-70"> · via Channel3</span>
+      </p>
+      <ul className="mt-2 flex gap-2 overflow-x-auto pb-1">
+        {market.comparables.slice(0, 4).map((c) => (
+          <li key={c.url} className="w-28 shrink-0">
+            <a href={c.url} target="_blank" rel="noreferrer" className="group block">
+              <div className="aspect-square overflow-hidden rounded-lg bg-white">
+                {c.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.image} alt="" className="size-full object-contain transition-transform group-hover:scale-105" />
+                ) : null}
+              </div>
+              <p className="mt-1 truncate text-[0.7rem] text-cream" title={c.title}>
+                {c.title}
+              </p>
+              <p className="text-[0.7rem] text-smoke">
+                {money(c.priceUsd)} · {c.store}
+              </p>
+            </a>
           </li>
         ))}
       </ul>

@@ -6,10 +6,10 @@ import { db, schema } from "@/lib/db";
 
 import { revalidatePath } from "next/cache";
 import { aiConfigured } from "@/lib/ai";
-import { draftListing, ListingError, publishInput, publishListing, type ListingDraft } from "@/lib/listings";
+import { draftListing, ListingError, publishInput, publishListing, type DraftedListing } from "@/lib/listings";
 import { requireSeller } from "@/lib/seller-session";
 
-export type DraftResult = { ok: true; draft: ListingDraft & { alreadySells?: string } } | { ok: false; message: string };
+export type DraftResult = { ok: true; draft: DraftedListing } | { ok: false; message: string };
 export type PublishResult = { ok: true; productId: string; paypalProductId: string } | { ok: false; message: string };
 
 async function photo(form: FormData) {

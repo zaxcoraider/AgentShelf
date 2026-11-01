@@ -10,6 +10,7 @@ import { createCatalogProduct } from "./paypal/toolkit";
 import { appUrl } from "./shop";
 import { policyText } from "./shop-facts";
 import { LIMITS } from "./listing-limits";
+import { marketContext, marketPrices, type MarketPrices } from "./channel3";
 
 /**
  * Photo → listing onboarding: a vision model drafts the listing from a product photo,
@@ -30,7 +31,9 @@ export const listingDraft = z.object({
     ),
   size: z.string().describe("Size only, e.g. '8 oz' or '12 cm tall'; if not visible, the shop's usual size"),
   suggestedPriceUsd: z.number().describe("Price in USD that fits this shop's existing prices"),
-  priceReason: z.string().describe("One sentence on why that price, comparing to the shop's products"),
+  priceReason: z
+    .string()
+    .describe("One sentence on why that price, comparing to the shop's products and, when given, the market prices of similar products"),
 });
 export type ListingDraft = z.infer<typeof listingDraft>;
 
@@ -44,14 +47,19 @@ function checkImage(image: { data: Buffer; mediaType: string }) {
 export async function draftListing(
   seller: Seller,
   image: { data: Buffer; mediaType: string },
-): Promise<ListingDraft & { alreadySells?: string }> {
+): Promise<DraftedListing> {
   checkImage(image);
-  const catalog = await db.query.products.findMany({ where: eq(schema.products.sellerId, seller.id) });
+  // Market prices from the photo (Channel3) and the shop's own catalog, fetched together.
+  const [catalog, market] = await Promise.all([
+    db.query.products.findMany({ where: eq(schema.products.sellerId, seller.id) }),
+    marketPrices(image),
+  ]);
   const context = [
     `Shop: ${seller.name}. ${seller.tagline ?? ""}`,
     `Shop policy:\n${policyText(seller)}`,
     "Current products and prices:",
-    ...catalog.map((p) => `- ${p.title}: ${usd(p.priceCents)} (${p.attributes.size ?? "?"})`),
+    ...(catalog.length ? catalog.map((p) => `- ${p.title}: ${usd(p.priceCents)} (${p.attributes.size ?? "?"})`) : ["- (none yet)"]),
+    ...(market ? ["", marketContext(market)] : []),
   ].join("\n");
 
   const { output } = await withFallback("vision", (model) =>
@@ -83,8 +91,11 @@ export async function draftListing(
     size: clip(output.size, LIMITS.size),
     suggestedPriceUsd: Math.round(output.suggestedPriceUsd * 100) / 100,
     alreadySells: same?.title,
+    market: market ?? undefined,
   };
 }
+
+export type DraftedListing = ListingDraft & { alreadySells?: string; market?: MarketPrices };
 
 /** Shorten to `max` characters, preferring the last comma, then a word boundary. */
 function clip(text: string, max: number) {
