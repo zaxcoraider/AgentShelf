@@ -11,9 +11,10 @@ const product = (title: string, ...offers: [number, string][]) => ({
 test("uses each product's cheapest USD offer and ignores other currencies", () => {
   const m = summarize([product("a", [30, "USD"], [24, "USD"], [5, "EUR"]), product("b", [40, "USD"]), product("c", [32, "USD"])]);
   assert.ok(m);
+  // Closest to the median first.
   assert.deepEqual(
     m.comparables.map((c) => c.priceUsd),
-    [24, 40, 32],
+    [32, 24, 40],
   );
   assert.equal(m.lowUsd, 24);
   assert.equal(m.highUsd, 40);

@@ -12,7 +12,7 @@ Built for [Build What's Next with PayPal and AI](https://paypalaihackathon.devpo
 
 | | Feature | Where |
 | --- | --- | --- |
-| 📸 | **Photo → listing.** Drop in product photos; a vision model drafts the title, description, scent, size, and a price that fits the shop. Publishing creates the product in the seller's **PayPal catalog** via the Agent Toolkit. | `/seller/listings` |
+| 📸 | **Photo → listing, priced against the market.** Drop in product photos; a vision model drafts the title, description, key details and size. **Channel3** image search finds similar products for sale online, and the suggested price is explained against their real range and median (shown with four example listings). Publishing creates the product in the seller's **PayPal catalog** via the Agent Toolkit. | `/seller/listings` |
 | 🤖 | **A shop AI assistants can buy from.** Every shop has its own MCP server: search, product details, the shop's policy, questions answered from it, checkout as a **PayPal order** the buyer approves, order status, and refund requests. | `/api/mcp/<shop>` |
 | 🛍️ | **Product cards inside the chat (MCP Apps).** In Claude, ChatGPT, and other hosts that support MCP Apps, search results render as product cards with photos and a **Buy with PayPal** button. The card creates the PayPal order, opens PayPal for the buyer to approve, and flips to “Paid” once the payment is captured. Other assistants get the same data as text. | `src/lib/mcp/product-widget.ts` |
 | 🧭 | **Facts AI can't get wrong.** Each shop's shipping, returns, and materials are structured fields (`src/lib/shop-facts.ts`), served identically to people (storefront), AI assistants (`get_shop_policy`, `ask_seller`), crawlers (schema.org Product, Offer, shipping and return-policy JSON-LD), and `/llms.txt`. What a shop doesn't do is stated as plainly as what it does, so assistants say "no" instead of guessing. | `/llms.txt`, `/shop/<shop>/llms.txt` |
@@ -48,7 +48,8 @@ Everything runs against the PayPal **sandbox**; the app refuses to start against
 | Job | Model (via Nebius Token Factory) | Code |
 | --- | --- | --- |
 | Seller agent: tool calling over PayPal + shop data | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/lib/agent/seller-agent.ts` |
-| Photo → listing (vision, structured output) | `moonshotai/Kimi-K3` | `src/lib/listings.ts` |
+| Photo → listing (vision, structured output), priced against the market | `moonshotai/Kimi-K3` + [Channel3](https://trychannel3.com) image search | `src/lib/listings.ts`, `src/lib/channel3.ts` |
+| AG Studio dashboard agents (our lead + PayPal seller agent + Studio's built-ins) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/app/seller/dashboard/studio-ai.ts` |
 | Answering shopper questions from the policy only (`ask_seller`) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `src/lib/shop.ts` |
 
 Models were chosen by testing on our own tasks: a refund the policy covers, one it doesn't (used candle, "scent too strong"), reviewing real disputes with all 17 tools, and grounded Q&A where the honest answer is "not sure". All AI calls go through one OpenAI-compatible module (`src/lib/ai.ts`) with a fallback provider, built on the [Vercel AI SDK](https://ai-sdk.dev). Any compatible provider or model is an environment-variable change.

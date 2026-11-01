@@ -85,8 +85,10 @@ export function summarize(products: C3Product[]): MarketPrices | null {
   const trimmed = prices.length >= 6 ? prices.slice(1, -1) : prices;
   const mid = Math.floor(trimmed.length / 2);
   const median = trimmed.length % 2 ? trimmed[mid] : (trimmed[mid - 1] + trimmed[mid]) / 2;
+  // Show the most typical matches: closest to the median first, so a luxury set or clearance item isn't the example.
+  const typical = [...comparables].sort((a, b) => Math.abs(a.priceUsd - median) - Math.abs(b.priceUsd - median));
   return {
-    comparables: comparables.slice(0, 6),
+    comparables: typical.slice(0, 6),
     lowUsd: trimmed[0],
     medianUsd: Math.round(median * 100) / 100,
     highUsd: trimmed[trimmed.length - 1],

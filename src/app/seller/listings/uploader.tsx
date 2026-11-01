@@ -206,7 +206,7 @@ function MarketRange({ market }: { market: NonNullable<DraftedListing["market"]>
               <p className="mt-1 truncate text-[0.7rem] text-cream" title={c.title}>
                 {c.title}
               </p>
-              <p className="text-[0.7rem] text-smoke">
+              <p className="truncate text-[0.7rem] text-smoke" title={c.store}>
                 {money(c.priceUsd)} · {c.store}
               </p>
             </a>

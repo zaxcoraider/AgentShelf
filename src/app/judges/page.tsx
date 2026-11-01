@@ -24,6 +24,7 @@ const FEATURES: [feature: string, where: string, href: string][] = [
   ["Shipment Tracking, PayPal emails the buyer", "Inbox → Ready to ship", "/seller/inbox"],
   ["Disputes + verified webhooks", "Inbox and Dashboard → PayPal disputes", "/seller/dashboard"],
   ["Catalog Products via the Agent Toolkit", "Add products from a photo", "/seller/listings"],
+  ["Market prices from Channel3 image search", "Add products from a photo", "/seller/listings"],
   ["PayPal Agent Toolkit (seller agent's tools)", "Inbox → Ask your agent", "/seller/inbox"],
   ["MCP server + product cards in chat (MCP Apps)", "Claude / ChatGPT connector", "/seller/connect"],
   ["AG Studio: custom widgets + our agent in Studio's team", "Dashboard → Ask AI", "/seller/dashboard"],
