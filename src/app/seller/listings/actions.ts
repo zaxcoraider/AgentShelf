@@ -2,6 +2,7 @@
 
 import { count, eq } from "drizzle-orm";
 import { START_LIMITS } from "@/app/start/options";
+import { refreshInBackground, refreshProductMarket } from "@/lib/market";
 import { db, schema } from "@/lib/db";
 
 import { revalidatePath } from "next/cache";
@@ -65,6 +66,8 @@ export async function publish(form: FormData): Promise<PublishResult> {
   try {
     const product = await publishListing(seller, parsed.data, await photo(form));
     revalidatePath(`/shop/${seller.slug}`);
+    // Market watch: find similar products for sale and subscribe to their prices, without waiting.
+    refreshInBackground(() => refreshProductMarket(product.id));
     return { ok: true, productId: product.id, paypalProductId: product.paypalProductId! };
   } catch (err) {
     return failure(err, "PayPal didn't accept the product. Nothing was published; try again.");

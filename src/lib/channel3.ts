@@ -10,6 +10,8 @@ const API = "https://api.trychannel3.com/v1";
 const TIMEOUT_MS = 8000;
 
 export type Comparable = {
+  /** Channel3's canonical product id (for product subscriptions). */
+  id: string;
   title: string;
   brand: string | null;
   priceUsd: number;
@@ -47,15 +49,22 @@ export type MarketLookup =
  * Similar products for sale, found from the product photo. Never throws: listing works without it,
  * and the result says whether Channel3 is off, failed, or found too few priced matches.
  */
-export async function marketPrices(image: { data: Buffer }): Promise<MarketLookup> {
+export async function marketPrices(image: { data: Buffer | Uint8Array }, opts: { query?: string } = {}): Promise<MarketLookup> {
   const key = process.env.CHANNEL3_API_KEY;
   if (!key) return { status: "off" };
   const started = Date.now();
   try {
-    const res = await fetch(`${API}/image-search`, {
+    // With a product name, search by name + photo (POST /v1/search): the photo alone can match whatever
+    // else is in the shot (a lamp behind a candle). Without one (a brand-new listing), photo only.
+    const res = await fetch(`${API}/${opts.query ? "search" : "image-search"}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": key },
-      body: JSON.stringify({ base64_image: image.data.toString("base64"), limit: 12 }),
+      // Buffer.from: photos read back from Postgres can arrive as a plain Uint8Array, whose toString isn't base64.
+      body: JSON.stringify({
+        ...(opts.query ? { query: opts.query } : {}),
+        base64_image: Buffer.from(image.data).toString("base64"),
+        limit: 12,
+      }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) {
@@ -82,6 +91,7 @@ export function summarize(products: C3Product[]): MarketPrices | null {
     const best = offers.reduce((a, b) => (b.price.price < a.price.price ? b : a));
     const img = p.images?.find((i) => i.is_main_image) ?? p.images?.[0];
     comparables.push({
+      id: p.id,
       title: p.title,
       brand: p.brands?.[0]?.name ?? null,
       priceUsd: Math.round(best.price.price * 100) / 100,
@@ -115,4 +125,77 @@ export function marketContext(m: MarketPrices) {
     ...m.comparables.map((c) => `- ${c.title}${c.brand ? ` (${c.brand})` : ""}: $${c.priceUsd.toFixed(2)} at ${c.store}`),
     "A handmade item from a small shop can sit at or above the median; explain the price against this range and the shop's own prices.",
   ].join("\n");
+}
+
+// ---------- Market watch: product subscriptions + webhooks ----------
+
+/**
+ * Subscribe to price changes for one comparable at one store. Free on Channel3; idempotent (an
+ * identical active subscription is returned as-is). Returns the subscription id, or null on failure.
+ */
+export async function subscribeToPrice(channel3ProductId: string, store: string): Promise<string | null> {
+  const key = process.env.CHANNEL3_API_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch(`${API}/product-subscriptions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": key },
+      body: JSON.stringify({ product_id: channel3ProductId, events: ["offer.price.changed"], domains: [store] }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn("[channel3] subscribe failed:", res.status, (await res.text().catch(() => "")).slice(0, 200));
+      return null;
+    }
+    const sub = (await res.json()) as { subscription_id?: string };
+    return sub.subscription_id ?? null;
+  } catch (err) {
+    console.warn("[channel3] subscribe error:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/** Cancel a subscription (when a product's comparables are replaced). Best effort. */
+export async function cancelSubscription(subscriptionId: string) {
+  const key = process.env.CHANNEL3_API_KEY;
+  if (!key) return;
+  await fetch(`${API}/product-subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: "DELETE",
+    headers: { "x-api-key": key },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  }).catch(() => undefined);
+}
+
+export type PriceChangedEvent = {
+  id: string;
+  type: "offer.price.changed";
+  timestamp: string;
+  data: {
+    subscription_id: string;
+    subject: { product_id: string; domain: string };
+    previous: { price: number; currency: string };
+    current: { price: number; currency: string };
+  };
+};
+
+/**
+ * Verify a Channel3 webhook (Standard Webhooks / Svix): HMAC-SHA256 over "id.timestamp.body" with the
+ * base64 secret after "whsec_", compared in constant time; timestamps over 5 minutes off are rejected.
+ */
+export async function verifyChannel3Webhook(headers: Headers, body: string, secret = process.env.CHANNEL3_WEBHOOK_SECRET) {
+  const id = headers.get("svix-id");
+  const timestamp = headers.get("svix-timestamp");
+  const signatures = headers.get("svix-signature");
+  if (!secret || !id || !timestamp || !signatures) return false;
+  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
+  if (!Number.isFinite(age) || age > 300) return false;
+  const { createHmac, timingSafeEqual } = await import("node:crypto");
+  const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
+  const expected = createHmac("sha256", key).update(`${id}.${timestamp}.${body}`).digest();
+  return signatures.split(" ").some((part) => {
+    const [version, sig] = part.split(",");
+    if (version !== "v1" || !sig) return false;
+    const given = Buffer.from(sig, "base64");
+    return given.length === expected.length && timingSafeEqual(given, expected);
+  });
 }

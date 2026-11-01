@@ -110,9 +110,41 @@ export const products = pgTable(
     imageUrl: text("image_url"),
     stock: integer("stock").notNull().default(0),
     active: boolean("active").notNull().default(true),
+    /** When Channel3 last looked for similar products for sale (Market watch). Null = never. */
+    marketCheckedAt: timestamp("market_checked_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [index("products_seller_idx").on(t.sellerId)],
+);
+
+/**
+ * Market watch: similar products for sale elsewhere (found by Channel3 from the product's photo),
+ * with their current price. Channel3 product subscriptions keep `priceCents` current via webhooks.
+ */
+export const marketComparables = pgTable(
+  "market_comparables",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    /** Channel3's canonical product id. */
+    channel3ProductId: text("channel3_product_id").notNull(),
+    title: text("title").notNull(),
+    brand: text("brand"),
+    /** The merchant domain of the cheapest US offer, e.g. "haand.us". */
+    store: text("store").notNull(),
+    url: text("url").notNull(),
+    imageUrl: text("image_url"),
+    priceCents: integer("price_cents").notNull(),
+    /** The price before the last change Channel3 told us about. */
+    previousPriceCents: integer("previous_price_cents"),
+    priceChangedAt: timestamp("price_changed_at", { withTimezone: true }),
+    /** Channel3 product subscription for offer.price.changed at this store. */
+    subscriptionId: text("subscription_id"),
+    ...timestamps,
+  },
+  (t) => [index("market_comparables_product_idx").on(t.productId), index("market_comparables_c3_idx").on(t.channel3ProductId)],
 );
 
 const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
@@ -208,3 +240,4 @@ export type Order = typeof orders.$inferSelect;
 export type AgentAction = typeof agentActions.$inferSelect;
 export type Dispute = typeof disputes.$inferSelect;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type MarketComparable = typeof marketComparables.$inferSelect;

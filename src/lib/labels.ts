@@ -18,6 +18,7 @@ export const TOOL_LABEL: Record<string, string> = {
   create_refund: "Refund",
   get_dispute: "Dispute review",
   review_dispute: "Dispute review",
+  market_watch: "Market watch",
 };
 
 export const DISPUTE_REASON: Record<string, string> = {

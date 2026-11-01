@@ -8,6 +8,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { and, asc, eq, isNull, lt } from "drizzle-orm";
 import { db, schema } from "../src/lib/db";
+import { refreshShopMarket } from "../src/lib/market";
 
 const SLUG = "mayas-candles";
 const reset = process.argv.includes("--reset");
@@ -83,6 +84,12 @@ const existing = await db.query.sellers.findFirst({ where: eq(schema.sellers.slu
 if (existing && !reset) {
   const attached = await attachSeedPhotos(existing.id);
   const disputed = await ensureDemoDisputes(existing.id);
+  // Market watch for the demo shop, once (1 Channel3 credit per product; skipped without a key).
+  if (process.env.CHANNEL3_API_KEY) {
+    const market = await refreshShopMarket(existing.id, { onlyNew: true });
+    const checked = Object.keys(market).length;
+    if (checked) console.log(`Market watch: checked ${checked} products.`);
+  }
   console.log(
     `"${existing.name}" already seeded${attached ? `; added ${attached} product photos` : ""}` +
       `${disputed ? `; added ${disputed} demo disputes` : ""}. Use --reset to recreate it.`,

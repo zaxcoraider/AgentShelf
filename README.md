@@ -196,6 +196,8 @@ On the live site, one click on **"Build a live watch page"** had five agents wor
 
 When a seller adds a product from a photo, the photo goes to **Channel3 image search** ([`src/lib/channel3.ts`](src/lib/channel3.ts)). Each match's cheapest US-dollar offer gives a **market range and median** (with the extremes trimmed), and the four most typical matches are shown with their photos, prices and stores. The range goes into the listing AI's prompt, so the suggested price is argued against real prices, e.g. *"At $46 it sits just above the $44 median for similar mugs."* When there are too few matches, the screen says so instead of guessing. One credit per photo.
 
+**Market watch** keeps watching after the listing is live. Each product's name and photo find similar products for sale (Channel3 search), and AgentShelf **subscribes to their prices** (Channel3 product subscriptions, free). When a store changes a price, Channel3's signed webhook ([`/api/webhooks/channel3`](src/app/api/webhooks/channel3/route.ts), Standard Webhooks signature checked, each event applied once) updates it, and the seller agent's log says what moved: *"A Light Read Book Candle at macys.com dropped from $45.00 to $31.50. Similar products now sell for a $44.47 median; yours is $28.00 (−37%)."* The Products page shows each product's market range and how far it sits from the median, and the AG Studio dashboard gets a **Market** table, so *"Am I priced right?"* in Ask AI charts your prices against the market ([`src/lib/market.ts`](src/lib/market.ts)).
+
 ## ☁️ Render
 
 AgentShelf runs on **Render** from a Blueprint ([`render.yaml`](render.yaml)): a Node web service and a managed Postgres database. Every push to `main` deploys automatically. Before each deploy goes live, Render runs the database migrations, seeds the demo shop if missing, backfills demo data, and deletes expired visitor shops, so a deploy never needs a manual step.
@@ -254,6 +256,7 @@ Demo shops run in the PayPal sandbox: no real money moves. The demo shop is read
       • Seller agent with guardrails and an approval Inbox<br>
       • AG Studio dashboard with our agent in Studio's team<br>
       • Photo → listing with Channel3 market prices<br>
+      • Market watch: competitor price alerts via Channel3 webhooks<br>
       • Create your own shop, products and settings<br>
       • Facts AI can't get wrong: MCP, JSON-LD, llms.txt<br>
       • Live on Render, deployed on every push
@@ -262,7 +265,6 @@ Demo shops run in the PayPal sandbox: no real money moves. The demo shop is read
       • <b>Sellers paid directly</b>: each shop connects its own PayPal account through PayPal's platform onboarding<br>
       • <b>Agent answers disputes with evidence</b>, after the seller approves<br>
       • <b>Invoices for custom orders</b> drafted by the agent<br>
-      • <b>Market watch</b>: your prices vs the market, weekly (Channel3)<br>
       • <b>Morning brief</b> from the seller agent (Render cron)
     </td>
     <td>

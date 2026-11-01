@@ -15,6 +15,13 @@ export type EditableProduct = {
   active: boolean;
   imageUrl: string | null;
   orders: number;
+  market: {
+    lowCents: number;
+    medianCents: number;
+    highCents: number;
+    vsMedianPct: number;
+    comparables: { title: string; store: string; url: string; imageUrl: string | null; priceCents: number; previousPriceCents: number | null }[];
+  } | null;
 };
 
 const input =
@@ -65,6 +72,7 @@ export function ProductRow({ product: p, editable }: { product: EditableProduct;
             <span className="text-smoke">{p.stock} in stock</span>
             {p.orders > 0 && <span className="text-smoke">· {p.orders} order{p.orders === 1 ? "" : "s"}</span>}
           </div>
+          {p.market && <MarketLine market={p.market} />}
         </div>
       </div>
 
@@ -159,5 +167,54 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
       <span className="mb-1 block text-xs text-smoke">{label}</span>
       {children}
     </label>
+  );
+}
+
+/** Where this product sits against similar products for sale (Market watch, via Channel3). */
+function MarketLine({ market: m }: { market: NonNullable<EditableProduct["market"]> }) {
+  const [open, setOpen] = useState(false);
+  const pct = m.vsMedianPct;
+  const tone = pct > 20 ? "text-amber-300" : pct < -20 ? "text-emerald-300" : "text-cream";
+  const verdict = pct > 20 ? "above the market" : pct < -20 ? "below the market" : "in line with the market";
+  const moved = m.comparables.filter((c) => c.previousPriceCents != null && c.previousPriceCents !== c.priceCents);
+  return (
+    <div className="mt-2 text-xs">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-left text-smoke hover:text-cream">
+        <span>
+          Market {usd(m.lowCents)}–{usd(m.highCents)}, median <span className="text-cream">{usd(m.medianCents)}</span>
+        </span>
+        <span className={tone}>
+          · {pct >= 0 ? "+" : ""}
+          {pct}% {verdict}
+        </span>
+        {moved.length > 0 && <span className="text-amber-300">· {moved.length} price change{moved.length === 1 ? "" : "s"}</span>}
+        <span aria-hidden>{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <ul className="mt-2 flex gap-2 overflow-x-auto pb-1">
+          {m.comparables.map((c) => (
+            <li key={c.url} className="w-28 shrink-0">
+              <a href={c.url} target="_blank" rel="noreferrer" className="group block">
+                <div className="aspect-square overflow-hidden rounded-lg bg-white">
+                  {c.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.imageUrl} alt="" className="size-full object-contain transition-transform group-hover:scale-105" />
+                  ) : null}
+                </div>
+                <p className="mt-1 truncate text-cream" title={c.title}>
+                  {c.title}
+                </p>
+                <p className="truncate text-smoke" title={c.store}>
+                  {c.previousPriceCents != null && c.previousPriceCents !== c.priceCents && (
+                    <span className="mr-1 line-through opacity-70">{usd(c.previousPriceCents)}</span>
+                  )}
+                  {usd(c.priceCents)} · {c.store}
+                </p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

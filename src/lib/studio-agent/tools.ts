@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { autoRefundedToday } from "../agent/actions";
 import { DAILY_AUTO_REFUND_CAP_CENTS, decideRefund } from "../agent/guardrails";
 import { db, schema } from "../db";
+import { marketFor } from "../market";
 import { disputeDueAt } from "../disputes";
 import type { Order, Seller } from "../db/schema";
 import { ACTION_STATUS_LABEL, DISPUTE_REASON, ORDER_STATUS_LABEL, TOOL_LABEL } from "../labels";
@@ -169,7 +170,36 @@ export async function checkRefund(seller: Seller, orderRef: string, amountDollar
   };
 }
 
-export const STUDIO_SELLER_TOOLS = ["shop_briefing", "agent_activity", "find_orders", "check_refund"] as const;
+/** Market watch: each product's price against similar products for sale (Channel3), and recent price moves. */
+export async function marketWatch(seller: Seller) {
+  const products = await db.query.products.findMany({
+    where: and(eq(schema.products.sellerId, seller.id), eq(schema.products.active, true)),
+  });
+  const market = await marketFor(products);
+  const rows = products.map((p) => {
+    const m = market.get(p.id);
+    if (!m) return { product: p.title, yourPrice: usd(p.priceCents), market: p.marketCheckedAt ? "too few similar products found" : "not checked yet" };
+    const moves = m.comparables
+      .filter((c) => c.previousPriceCents != null && c.previousPriceCents !== c.priceCents)
+      .map((c) => `${c.title} at ${c.store}: ${usd(c.previousPriceCents!)} → ${usd(c.priceCents)}`);
+    return {
+      product: p.title,
+      yourPrice: usd(p.priceCents),
+      marketLow: usd(m.lowCents),
+      marketMedian: usd(m.medianCents),
+      marketHigh: usd(m.highCents),
+      vsMedianPct: m.vsMedianPct,
+      examples: m.comparables.slice(0, 3).map((c) => `${c.title} (${c.store}) ${usd(c.priceCents)}`),
+      recentPriceChanges: moves.length ? moves : undefined,
+    };
+  });
+  return {
+    note: "Similar products for sale online, found by Channel3 from each product's photo. vsMedianPct: + means above the market median.",
+    products: rows,
+  };
+}
+
+export const STUDIO_SELLER_TOOLS = ["shop_briefing", "agent_activity", "find_orders", "check_refund", "market_watch"] as const;
 export type StudioSellerTool = (typeof STUDIO_SELLER_TOOLS)[number];
 
 export async function runStudioSellerTool(seller: Seller, tool: StudioSellerTool, args: Record<string, unknown>) {
@@ -183,6 +213,8 @@ export async function runStudioSellerTool(seller: Seller, tool: StudioSellerTool
       });
     case "find_orders":
       return findOrders(seller, String(args.query ?? ""));
+    case "market_watch":
+      return marketWatch(seller);
     case "check_refund":
       return checkRefund(
         seller,

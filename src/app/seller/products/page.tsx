@@ -1,7 +1,9 @@
 import { count, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
+import { marketFor } from "@/lib/market";
 import { canEditShop, requireSeller } from "@/lib/seller-session";
+import { CheckMarket } from "./check-market";
 import { ProductRow, type EditableProduct } from "./product-row";
 
 // The seller's catalog: edit details, price and stock, hide from sale, or delete.
@@ -22,6 +24,7 @@ export default async function Products() {
       .groupBy(schema.orders.productId),
   ]);
   const orders = new Map(orderCounts.map((o) => [o.productId, o.n]));
+  const market = await marketFor(products);
   const rows: EditableProduct[] = products.map((p) => ({
     id: p.id,
     title: p.title,
@@ -33,6 +36,25 @@ export default async function Products() {
     active: p.active,
     imageUrl: p.imageUrl,
     orders: orders.get(p.id) ?? 0,
+    market: (() => {
+      const m = market.get(p.id);
+      return m
+        ? {
+            lowCents: m.lowCents,
+            medianCents: m.medianCents,
+            highCents: m.highCents,
+            vsMedianPct: m.vsMedianPct,
+            comparables: m.comparables.map((c) => ({
+              title: c.title,
+              store: c.store,
+              url: c.url,
+              imageUrl: c.imageUrl,
+              priceCents: c.priceCents,
+              previousPriceCents: c.previousPriceCents,
+            })),
+          }
+        : null;
+    })(),
   }));
   const onSale = rows.filter((r) => r.active && r.stock > 0).length;
 
@@ -47,12 +69,15 @@ export default async function Products() {
             assistants straight away.
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          {process.env.CHANNEL3_API_KEY && rows.length > 0 && <CheckMarket />}
         <Link
           href="/seller/listings"
           className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-wax transition-colors hover:bg-amber-400"
         >
           <span aria-hidden>+</span> Add products
         </Link>
+        </div>
       </div>
 
       {!editable && (

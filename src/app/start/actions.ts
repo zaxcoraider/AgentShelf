@@ -13,6 +13,7 @@ import { DEMO_SELLER_SLUG } from "@/lib/seller";
 import { shopSlug, startSession } from "@/lib/seller-auth";
 import { SHIP_TO, SHOP_KINDS, START_LIMITS, type CreateShopState, type ShopKind } from "./options";
 import { SAMPLE_PRODUCTS } from "./samples";
+import { refreshInBackground, refreshShopMarket } from "@/lib/market";
 
 /**
  * Create a visitor shop from the /start form, sign the browser in as it, and go to the welcome page.
@@ -116,6 +117,8 @@ export async function createShop(_prev: CreateShopState, form: FormData): Promis
     if (kind === "candles") await copySampleProducts(seller.id);
     else await addSampleProducts(seller.id, kind);
   }
+
+  if (samples) refreshInBackground(() => refreshShopMarket(seller.id, { onlyNew: true }));
 
   await startSession(seller.slug);
   redirect("/seller/welcome");

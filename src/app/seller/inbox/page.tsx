@@ -99,6 +99,8 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
 
   const describeOrder = (orderId: string | null) => {
     const o = orderId ? orderById.get(orderId) : undefined;
+    // Some agent actions aren't about an order (e.g. Market watch price moves).
+    if (!orderId) return "Your catalog";
     if (!o) return "Unknown order";
     const who = o.channel === "ai_agent" ? `via ${o.agentName ?? "AI assistant"}` : "via storefront";
     return `${o.productId ? titleById.get(o.productId) : "Order"}${o.quantity > 1 ? ` ×${o.quantity}` : ""} · ${usd(o.amountCents)} · ${o.buyerName ?? "buyer"} ${who}`;

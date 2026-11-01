@@ -1,6 +1,7 @@
 import { and, eq, notInArray } from "drizzle-orm";
 import { db, schema } from "./db";
 import { disputeDueAt } from "./disputes";
+import { marketFor } from "./market";
 import type { Seller } from "./db/schema";
 import { ACTION_STATUS_LABEL, DISPUTE_REASON, ORDER_STATUS_LABEL, TOOL_LABEL } from "./labels";
 
@@ -37,6 +38,7 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
       .where(eq(schema.orders.sellerId, seller.id)),
   ]);
   const orderIds = new Set(orders.map((o) => o.id));
+  const market = await marketFor(products);
 
   return {
     sources: [
@@ -97,6 +99,8 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
           stock: p.stock,
           active: p.active,
           inPayPalCatalog: Boolean(p.paypalProductId),
+          marketMedian: market.has(p.id) ? dollars(market.get(p.id)!.medianCents) : null,
+          vsMarket: market.has(p.id) ? market.get(p.id)!.vsMedianPct / 100 : null,
         })),
         fields: [
           { id: "productId", ...hidden },
@@ -106,6 +110,46 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
           { id: "stock", name: "Stock", format: "integerFormat" },
           { id: "active", name: "On sale", format: "booleanFormat" },
           { id: "inPayPalCatalog", name: "In PayPal catalog", format: "booleanFormat" },
+          {
+            id: "marketMedian",
+            name: "Market median",
+            description: "Median price of similar products for sale online (Market watch, via Channel3). Empty if not checked yet.",
+            ...currency,
+          },
+          {
+            id: "vsMarket",
+            name: "Price vs market",
+            description: "This product's price compared with the market median: 0.12 = 12% above, -0.1 = 10% below.",
+            format: "percentageFormat",
+          },
+        ],
+      },
+      {
+        id: "market",
+        name: "Market",
+        description:
+          "Market watch: similar products for sale at other stores (found by Channel3 from each product's photo), with their current price. Prices update when stores change them.",
+        data: products.flatMap((p) =>
+          (market.get(p.id)?.comparables ?? []).map((c) => ({
+            comparableId: c.id,
+            productId: p.id,
+            comparable: c.title,
+            store: c.store,
+            marketPrice: dollars(c.priceCents),
+            previousPrice: c.previousPriceCents != null ? dollars(c.previousPriceCents) : null,
+            priceChange: c.previousPriceCents != null ? dollars(c.priceCents - c.previousPriceCents) : 0,
+            yourPrice: dollars(p.priceCents),
+          })),
+        ),
+        fields: [
+          { id: "comparableId", ...hidden },
+          { id: "productId", ...hidden },
+          { id: "comparable", name: "Similar product", ...text },
+          { id: "store", name: "Store", ...text },
+          { id: "marketPrice", name: "Their price", ...currency },
+          { id: "previousPrice", name: "Their previous price", ...currency },
+          { id: "priceChange", name: "Their price change", description: "Latest change at that store; negative = price dropped.", ...currency },
+          { id: "yourPrice", name: "Your price", ...currency },
         ],
       },
       {
@@ -180,6 +224,7 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
       rel("orders", "productId", "products", "productId"),
       rel("agentActions", "orderId", "orders", "orderId"),
       rel("disputes", "orderId", "orders", "orderId"),
+      rel("market", "productId", "products", "productId"),
     ],
   };
 }

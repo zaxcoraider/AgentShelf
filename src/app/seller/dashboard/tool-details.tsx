@@ -238,6 +238,44 @@ function OrdersCard(params: AgAiToolDetailParams) {
   );
 }
 
+type MarketWatch = {
+  products: { product: string; yourPrice: string; marketMedian?: string; marketLow?: string; marketHigh?: string; vsMedianPct?: number; market?: string; recentPriceChanges?: string[] }[];
+};
+
+function MarketCard(params: AgAiToolDetailParams) {
+  const m = data<MarketWatch>(params);
+  if (!m) return null;
+  return (
+    <Card>
+      <Heading aside="via Channel3">Your price vs the market</Heading>
+      <ul className="space-y-1.5">
+        {m.products.map((p) => {
+          const pct = p.vsMedianPct;
+          const tone = pct == null ? "bg-white/10 text-smoke" : pct > 20 ? "bg-amber-500/20 text-amber-300" : pct < -20 ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-cream";
+          return (
+            <li key={p.product}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate">{p.product}</span>
+                <Chip className={tone}>{pct == null ? (p.market ?? "–") : `${pct >= 0 ? "+" : ""}${pct}%`}</Chip>
+              </div>
+              {p.marketMedian && (
+                <p className="text-smoke">
+                  {p.yourPrice} vs median {p.marketMedian} ({p.marketLow}–{p.marketHigh})
+                </p>
+              )}
+              {p.recentPriceChanges?.map((c) => (
+                <p key={c} className="text-amber-300/90">
+                  ↘ {c}
+                </p>
+              ))}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
 // ---------- Labels + cards, keyed by tool name ----------
 
 const pill = (d: unknown, unit: string) => (Array.isArray(d) ? `${d.length} ${unit}` : undefined);
@@ -266,6 +304,17 @@ export const aiToolDisplay: Record<string, AgAiToolDisplay> = {
       pill: result?.success ? pill(result.data, "found") : undefined,
     }),
     detail: OrdersCard,
+  },
+  market_watch: {
+    label: ({ result }) => {
+      const m = result?.success ? (result.data as MarketWatch | undefined) : undefined;
+      const above = m?.products.filter((p) => (p.vsMedianPct ?? 0) > 20).length;
+      return {
+        text: result ? "Checked prices against the market" : "Checking prices against the market",
+        pill: m ? (above ? `${above} above market` : "in line") : undefined,
+      };
+    },
+    detail: MarketCard,
   },
   check_refund: {
     label: ({ args, result }) => {
