@@ -38,7 +38,7 @@ async function log(values: typeof schema.agentActions.$inferInsert) {
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 /** Refunds the agent made on its own for this seller since midnight UTC. */
-async function autoRefundedToday(sellerId: string) {
+export async function autoRefundedToday(sellerId: string) {
   const midnight = new Date();
   midnight.setUTCHours(0, 0, 0, 0);
   const [row] = await db
