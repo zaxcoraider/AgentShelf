@@ -20,7 +20,9 @@ Built for [Build What's Next with PayPal and AI](https://paypalaihackathon.devpo
 | 🛍️ | **Storefront for humans.** The same catalog with **PayPal JS SDK v6** buttons. | `/shop/<shop>` |
 | 🧾 | **Seller agent.** Reviews buyers' refund requests against the shop policy, refunds within the rules, escalates the rest, adds tracking, and recommends how to answer disputes. The seller can also give it instructions in plain English. | `src/lib/agent/` |
 | ✅ | **Seller Inbox, live.** Approval queue for refunds over the limit, orders to ship, open disputes with response-deadline countdowns, and a filterable log of everything the agent did. New orders and agent actions slide in as they happen. | `/seller/inbox` |
-| 📊 | **Seller dashboard (AG Studio).** Net sales, order count, the share bought by AI assistants, open disputes, daily sales split by AI vs storefront, sales by assistant and by product, the agent's actions, and every order, all cross-filterable and editable in AG Studio's drag-and-drop editor. | `/seller/dashboard` |
+| 📊 | **Seller dashboard (AG Studio).** Net sales, order count, the share bought by AI assistants, open disputes, daily sales split by AI vs storefront, sales by assistant and by product, the agent's actions, and every order, all cross-filterable and editable in AG Studio's drag-and-drop editor. Updates live as orders and agent actions come in. | `/seller/dashboard` |
+| ⏱️ | **Custom AG Studio widgets.** A **dispute countdown** (every open PayPal dispute, soonest deadline first, ticking live, with the agent's recommendation) and a **live seller-agent feed** (refunds, tracking and dispute reviews as they happen, with done / needs you / blocked outcomes). Both query through Studio's data engine, so page filters and cross filters apply to them like any built-in chart. | `src/app/seller/dashboard/widgets.tsx` |
+| 🧠 | **Our PayPal agent inside AG Studio's Agent Framework.** "Ask AI" opens Studio's chat with our own team: a lead (Studio's built-in lead, extended) that delegates dashboard work to Studio's planning, data, page and widget agents and shop questions to **our PayPal seller agent**. That agent has custom tools (`api.defineAiTool`): `shop_briefing` (disputes by deadline, approvals waiting, orders to ship, refund headroom), `agent_activity`, `find_orders`, and `check_refund`, a dry run of the refund guardrails ("would this refund be automatic, need approval, or be blocked, and why?"). A custom `AgLlmAdapter` streams every turn through our server to Nebius, so no AI key reaches the browser. | `src/app/seller/dashboard/studio-ai.ts`, `src/app/api/seller/studio/` |
 | 👀 | **Your shop through AI's eyes.** An AI-readiness score that flags facts an assistant would have to guess (no size, no shipping countries), the exact data assistants receive, and a box to ask the shop questions like a shopper would. | `/seller/ai-view` |
 | 🔔 | **Webhooks.** Verified PayPal webhooks keep orders, refunds, and disputes in sync, even when the buyer closes the tab before returning, or the seller refunds in PayPal directly. | `/api/webhooks/paypal` |
 
@@ -74,7 +76,7 @@ flowchart LR
     SHOP["Shop logic<br/>checkout · capture · Q&A"]
     AGENT["Seller agent<br/>AI SDK + Agent Toolkit"]
     GUARD["Guardrails<br/>limits · approvals · log"]
-    UI["Seller app<br/>Inbox · Dashboard (AG Studio) · Add products · AI's view"]
+    UI["Seller app<br/>Inbox · Dashboard (AG Studio + agents) · Add products · AI's view"]
     WH["Webhook handler<br/>verified, idempotent"]
     DB[("Postgres<br/>orders · actions · disputes")]
   end
@@ -87,6 +89,7 @@ flowchart LR
   SHOP --> DB
   MCP -- request_refund --> AGENT
   UI --> AGENT
+  UI -- Studio agents via LLM proxy --> LLM
   AGENT --> LLM
   AGENT -- read-only tools --> PP
   AGENT --> GUARD --> PP
