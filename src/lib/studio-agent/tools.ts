@@ -156,7 +156,7 @@ export async function checkRefund(seller: Seller, orderRef: string, amountDollar
   const decision = decideRefund({ seller, order, amountCents, autoRefundedTodayCents: refundedToday });
   const verdict = {
     auto: "The seller agent would refund this on its own.",
-    needs_approval: "The seller agent would ask you first (it would land in your Inbox).",
+    needs_approval: "The seller agent would ask you first (it would land in your AgentShelf Inbox).",
     blocked: "The rules would refuse this refund.",
   }[decision.kind];
   return {
@@ -165,7 +165,7 @@ export async function checkRefund(seller: Seller, orderRef: string, amountDollar
     amount: "amountCents" in decision ? usd(decision.amountCents) : undefined,
     why: decision.why,
     refundRules: refundRules(seller, refundedToday),
-    note: "Dry run only. Nothing was refunded; real refunds happen from the Inbox.",
+    note: "Dry run only. Nothing was refunded; real refunds happen from the AgentShelf Inbox (seller menu).",
   };
 }
 

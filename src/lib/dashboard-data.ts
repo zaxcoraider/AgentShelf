@@ -43,6 +43,8 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
       {
         id: "orders",
         name: "Orders",
+        description:
+          "One row per paid order (abandoned checkouts excluded). Status: Paid = paid and waiting to ship; Shipped = sent with tracking; Refunded / Partly refunded; Disputed = buyer opened a PayPal dispute.",
         data: orders.map((o) => ({
           orderId: o.id,
           productId: o.productId,
@@ -66,13 +68,18 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
           { id: "productId", ...hidden },
           { id: "placedAt", name: "Placed at", format: "dateTimeFormat" },
           { id: "orderDate", name: "Order date", format: "dateFormat" },
-          { id: "channel", name: "Channel", ...text },
+          { id: "channel", name: "Channel", description: "Who placed the order: AI assistant or Storefront (a person on the website).", ...text },
           { id: "assistant", name: "Bought via", ...text },
           { id: "buyer", name: "Buyer", ...text },
-          { id: "status", name: "Status", ...text },
+          {
+            id: "status",
+            name: "Status",
+            description: "Paid (waiting to ship), Shipped, Refunded, Partly refunded, or Disputed. Orders still to ship are exactly status = Paid.",
+            ...text,
+          },
           { id: "quantity", name: "Quantity", format: "integerFormat" },
           { id: "gross", name: "Gross sales", ...currency },
-          { id: "refunded", name: "Refunded", ...currency },
+          { id: "refunded", name: "Refunded", description: "Total refunded on this order so far, whenever it happened (not by refund date).", ...currency },
           { id: "net", name: "Net sales", ...currency },
           { id: "aiOrder", name: "AI share", format: "percentageFormat" },
           { id: "orderCount", name: "Orders", format: "integerFormat" },
@@ -104,6 +111,8 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
       {
         id: "agentActions",
         name: "Agent actions",
+        description:
+          "Everything the PayPal seller agent did or tried: refunds, shipment tracking, dispute reviews, each with an outcome and the agent's reason. A refund's amount is in Amount; its date is When.",
         data: actions.map((a) => {
           const input = (a.input ?? {}) as { amountCents?: number };
           return {
@@ -124,7 +133,12 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
           { id: "at", name: "When", format: "dateTimeFormat" },
           { id: "actionDate", name: "Action date", format: "dateFormat" },
           { id: "action", name: "Action", ...text },
-          { id: "outcome", name: "Outcome", ...text },
+          {
+            id: "outcome",
+            name: "Outcome",
+            description: "Done by agent (within the seller's rules), Needs you (waiting for approval in the Inbox), Approved, Rejected, Blocked by rule, or Failed.",
+            ...text,
+          },
           { id: "amount", name: "Amount", ...currency },
           { id: "reason", name: "Agent's reason", ...text },
         ],
@@ -132,6 +146,7 @@ export async function dashboardData(seller: Seller, now = Date.now()) {
       {
         id: "disputes",
         name: "Disputes",
+        description: "PayPal disputes buyers opened. Open ones have a seller-response deadline (Respond by); missing it loses the dispute.",
         data: disputes.map(({ dispute: d, demo }) => {
           const dueAt = disputeDueAt(d.responseDueAt, demo, now);
           return {
