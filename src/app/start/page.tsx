@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Logo } from "@/components/logo";
+import { SiteFooter } from "@/components/site/site-footer";
+import { SiteHeader } from "@/components/site/site-header";
 import { StartForm } from "./form";
 
 export const metadata: Metadata = {
@@ -17,22 +17,15 @@ const YOU_GET = [
 
 export default function Start() {
   return (
-    <div className="dark relative min-h-screen overflow-hidden bg-wax text-cream [color-scheme:dark]">
+    <div className="dark relative min-h-screen overflow-x-clip bg-wax text-cream [color-scheme:dark]">
       <div
         aria-hidden
         className="candle-glow pointer-events-none absolute -top-40 left-1/4 size-[46rem] rounded-full bg-[radial-gradient(closest-side,rgba(245,158,11,0.12),transparent)]"
       />
-      <header className="relative mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" aria-label="AgentShelf home">
-          <Logo />
-        </Link>
-        <Link href="/signin" className="text-sm text-smoke transition-colors hover:text-cream">
-          Already have a shop? <span className="text-cream">Sign in</span>
-        </Link>
-      </header>
+      <SiteHeader current="/start" />
 
       <main className="relative mx-auto grid max-w-6xl gap-12 px-4 pt-8 pb-24 sm:px-6 lg:grid-cols-[1fr_minmax(0,34rem)] lg:gap-16 lg:pt-16">
-        <section className="lg:sticky lg:top-16 lg:self-start">
+        <section className="lg:sticky lg:top-28 lg:self-start">
           <p className="text-sm font-medium text-amber-400">Try it as a seller</p>
           <h1 className="mt-3 text-4xl leading-[1.05] font-semibold tracking-[-0.035em] sm:text-5xl">
             Open a shop AI assistants can buy from.
@@ -58,6 +51,7 @@ export default function Start() {
           <StartForm />
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

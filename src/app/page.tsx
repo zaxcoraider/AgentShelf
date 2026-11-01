@@ -1,10 +1,11 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { CopyButton } from "@/app/seller/connect/widgets";
-import { Logo } from "@/components/logo";
 import { requestBaseUrl } from "@/lib/base-url";
 import { db, schema } from "@/lib/db";
 import { usd } from "@/lib/money";
+import { SiteFooter } from "@/components/site/site-footer";
+import { SiteHeader } from "@/components/site/site-header";
 import { DEMO_SELLER_SLUG } from "@/lib/seller";
 import { policyLines, shopPolicy } from "@/lib/shop-facts";
 import { type Activity, Bento } from "./_landing/bento";
@@ -142,38 +143,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen overflow-x-clip bg-wax text-cream selection:bg-ember/40">
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-wax/70 backdrop-blur-xl">
-        <nav className={`${container} flex h-16 items-center justify-between text-sm`}>
-          <Link href="/" aria-label="AgentShelf home">
-            <Logo />
-          </Link>
-          <div className="hidden items-center gap-7 text-smoke md:flex">
-            <a href="#product" className="transition hover:text-cream">
-              Product
-            </a>
-            <a href="#how" className="transition hover:text-cream">
-              How it works
-            </a>
-            <a href="#developers" className="transition hover:text-cream">
-              Developers
-            </a>
-            <a href="https://github.com/zaxcoraider/AgentShelf" className="transition hover:text-cream">
-              GitHub
-            </a>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/seller/inbox" className="hidden text-smoke transition hover:text-cream sm:block">
-              Sign in
-            </Link>
-            <Link href={`/shop/${seller.slug}`} className="hidden text-smoke transition hover:text-cream sm:block">
-              Demo shop
-            </Link>
-            <Link href="/start" className="rounded-full bg-cream px-4 py-1.5 font-medium text-wax transition hover:bg-white">
-              Create your shop
-            </Link>
-          </div>
-        </nav>
-      </header>
+      <SiteHeader current="/" />
 
       <main>
         <section className="relative">
@@ -367,36 +337,7 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-white/[0.06]">
-        <div className={`${container} grid gap-10 py-14 text-sm sm:grid-cols-[2fr_1fr_1fr]`}>
-          <div>
-            <Logo />
-            <p className="mt-4 max-w-xs text-smoke">
-              Built for{" "}
-              <a href="https://paypalaihackathon.devpost.com" className="text-cream/80 hover:text-cream">
-                Build What&apos;s Next with PayPal and AI
-              </a>
-              . Runs on the PayPal sandbox.
-            </p>
-          </div>
-          <FooterLinks
-            title="Try it"
-            links={[
-              ["Demo shop", `/shop/${seller.slug}`],
-              ["Seller Inbox", "/seller/inbox"],
-              ["Add products", "/seller/listings"],
-            ]}
-          />
-          <FooterLinks
-            title="Build"
-            links={[
-              ["Connect your AI", "/seller/connect"],
-              ["llms.txt for AI assistants", "/llms.txt"],
-              ["Source on GitHub", "https://github.com/zaxcoraider/AgentShelf"],
-            ]}
-          />
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
@@ -406,23 +347,6 @@ function SectionHead({ title, children }: { title: string; children: React.React
     <div className="max-w-2xl">
       <h2 className="text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">{title}</h2>
       <p className="mt-4 text-lg leading-relaxed text-smoke">{children}</p>
-    </div>
-  );
-}
-
-function FooterLinks({ title, links }: { title: string; links: [string, string][] }) {
-  return (
-    <div>
-      <p className="font-medium">{title}</p>
-      <ul className="mt-4 space-y-2.5 text-smoke">
-        {links.map(([label, href]) => (
-          <li key={href}>
-            <Link href={href} className="transition hover:text-cream">
-              {label}
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

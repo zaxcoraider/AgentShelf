@@ -8,6 +8,7 @@ import { requestBaseUrl } from "@/lib/base-url";
 import { getShop, shippingCents, usd } from "@/lib/shop";
 import { policyLines, productJsonLd, shopPolicy } from "@/lib/shop-facts";
 import { BuyToggle, CheckoutProvider } from "./checkout";
+import { SiteFooter } from "@/components/site/site-footer";
 import { DemoBar } from "../demo-bar";
 
 // Public storefront for human buyers. AI buyers use the same catalog through /api/mcp/<slug>.
@@ -173,6 +174,7 @@ export default async function Storefront({ params }: { params: Promise<{ slug: s
           </span>
         </div>
       </footer>
+      <SiteFooter variant="slim" tone="light" />
     </div>
   );
 }

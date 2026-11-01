@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/signin/actions";
 import { Logo } from "@/components/logo";
+import { SiteFooter } from "@/components/site/site-footer";
 import { DEMO_SELLER_SLUG } from "@/lib/seller";
 import { sessionSeller } from "@/lib/seller-session";
 import { sellerAuthEnabled } from "@/lib/session";
@@ -43,6 +44,9 @@ export default async function SellerLayout({ children }: { children: React.React
         </nav>
       </header>
       <div className="relative">{children}</div>
+      <div className="relative">
+        <SiteFooter variant="slim" width="max-w-5xl" />
+      </div>
     </div>
   );
 }

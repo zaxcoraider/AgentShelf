@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { DemoBar } from "@/app/shop/demo-bar";
+import { SiteFooter } from "@/components/site/site-footer";
 import { DEMO_SELLER_SLUG } from "@/lib/seller";
 import { db, schema } from "@/lib/db";
 import { completeCheckout, ShopError, usd } from "@/lib/shop";
@@ -91,6 +92,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="light min-h-screen bg-[#fbf8f3] text-stone-900 [color-scheme:light]">
       <DemoBar />
       <main className="mx-auto flex max-w-6xl justify-center px-4 py-16 sm:py-24">{children}</main>
+      <SiteFooter variant="slim" tone="light" />
     </div>
   );
 }
