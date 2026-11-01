@@ -8,6 +8,7 @@ import { requestBaseUrl } from "@/lib/base-url";
 import { getShop, shippingCents, usd } from "@/lib/shop";
 import { policyLines, productJsonLd, shopPolicy } from "@/lib/shop-facts";
 import { BuyToggle, CheckoutProvider } from "./checkout";
+import { DemoBar } from "../demo-bar";
 
 // Public storefront for human buyers. AI buyers use the same catalog through /api/mcp/<slug>.
 export const dynamic = "force-dynamic";
@@ -50,6 +51,7 @@ export default async function Storefront({ params }: { params: Promise<{ slug: s
         // JSON.stringify output with "<" escaped can't break out of the script tag.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
+      <DemoBar />
       <header className="border-b border-stone-900/[0.06]">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <p className="text-lg font-semibold tracking-tight">{seller.name}</p>
