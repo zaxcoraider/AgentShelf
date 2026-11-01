@@ -30,6 +30,7 @@ export default async function Settings() {
     materials: p?.materials ?? "",
     customOrders: p?.customOrders ?? "",
     refundLimitUsd: (seller.refundAutoLimitCents / 100).toFixed(2),
+    marketplace: seller.marketplace,
   };
 
   return (

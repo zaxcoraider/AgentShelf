@@ -16,6 +16,7 @@ export type SettingsValues = {
   materials: string;
   customOrders: string;
   refundLimitUsd: string;
+  marketplace: boolean;
 };
 
 const input =
@@ -78,6 +79,19 @@ export function SettingsForm({ values, editable, dailyCap }: { values: SettingsV
           <Field id="customOrders" label="Custom orders" hint="Optional; empty = no custom orders" error={err("customOrders")}>
             <input id="customOrders" name="customOrders" defaultValue={values.customOrders} maxLength={160} placeholder="e.g. Engraving on request, 2 weeks" className={input} />
           </Field>
+        </Section>
+
+        <Section title="AI shoppers">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5">
+            <input type="checkbox" name="marketplace" defaultChecked={values.marketplace} className="mt-0.5 size-4 accent-amber-500" />
+            <span className="text-sm">
+              <span className="text-cream">Show my shop in the AgentShelf marketplace</span>
+              <span className="block text-smoke">
+                One connector lets AI assistants search every AgentShelf shop at once, so shoppers can find you without adding
+                your shop first. Your own shop connector works either way.
+              </span>
+            </span>
+          </label>
         </Section>
 
         <Section title="Seller agent">

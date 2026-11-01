@@ -5,7 +5,6 @@ import { DEMO_SHOP, REPO_URL } from "@/components/site/nav-links";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { requestBaseUrl } from "@/lib/base-url";
-import { DEMO_SELLER_SLUG } from "@/lib/seller";
 
 export const metadata: Metadata = {
   title: "Judge's guide · AgentShelf",
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const PROMPT =
-  "I'm looking for a cozy candle under $30 as a gift from Maya's Candles. Do you ship to Canada? Ask the seller if it's soy wax, then check out the best one for me.";
+  "I'm looking for a handmade gift under $40 on AgentShelf. Show me a few options from different shops, ask the seller whether they ship to Canada, then check out the best one for me.";
 
 const FEATURES: [feature: string, where: string, href: string][] = [
   ["PayPal Orders v2: create + capture", "Any checkout (storefront or AI)", DEMO_SHOP],
@@ -26,13 +25,15 @@ const FEATURES: [feature: string, where: string, href: string][] = [
   ["Catalog Products via the Agent Toolkit", "Add products from a photo", "/seller/listings"],
   ["Market prices from Channel3 image search", "Add products from a photo", "/seller/listings"],
   ["PayPal Agent Toolkit (seller agent's tools)", "Inbox → Ask your agent", "/seller/inbox"],
-  ["MCP server + product cards in chat (MCP Apps)", "Claude / ChatGPT connector", "/seller/connect"],
+  ["One marketplace MCP for every shop, plus one per shop", "Claude / ChatGPT connector", "/seller/connect"],
+  ["Product cards in chat (MCP Apps) with Buy with PayPal", "Claude / ChatGPT connector", "/seller/connect"],
   ["AG Studio: custom widgets + our agent in Studio's team", "Dashboard → Ask AI", "/seller/dashboard"],
   ["Facts AI can't get wrong (llms.txt, JSON-LD)", "AI's view", "/seller/ai-view"],
 ];
 
 export default async function Judges() {
-  const mcpUrl = `${await requestBaseUrl()}/api/mcp/${DEMO_SELLER_SLUG}`;
+  // The marketplace connector: every shop, including one the judge creates in path 4.
+  const mcpUrl = `${await requestBaseUrl()}/api/mcp`;
 
   const paths = [
     {
@@ -49,8 +50,8 @@ export default async function Judges() {
       who: "Through an AI assistant",
       time: "3 min",
       steps: [
-        <>In Claude: Settings → Connectors → <b>Add custom connector</b>, and paste the shop address below.</>,
-        <>Ask the prompt below. Claude searches, asks the seller, and shows <b>product cards</b> with Buy with PayPal.</>,
+        <>In Claude: Settings → Connectors → <b>Add custom connector</b>, and paste the <b>AgentShelf marketplace</b> address below: one connector, every shop.</>,
+        <>Ask the prompt below. Claude searches across shops, asks the right seller, and shows <b>product cards</b> with Buy with PayPal.</>,
         <>Approve in PayPal; the card flips to <b>Paid</b>.</>,
       ],
       cta: ["Setup for other assistants", "/seller/connect"],
@@ -72,7 +73,7 @@ export default async function Judges() {
       steps: [
         <>Create a shop: name, the facts AI will quote, a password.</>,
         <>You get your own storefront, MCP server, seller agent and dashboard.</>,
-        <>Connect it to Claude and ask something only your shop&apos;s facts can answer.</>,
+        <>Your products show up in the same marketplace connector straight away. Ask something only your shop&apos;s facts can answer.</>,
       ],
       cta: ["Create your shop", "/start"],
     },
@@ -115,7 +116,7 @@ export default async function Judges() {
               </ol>
               {p.extra && (
                 <div className="mt-4 space-y-2">
-                  <CopyRow label="Shop address" value={mcpUrl} />
+                  <CopyRow label="AgentShelf marketplace (MCP)" value={mcpUrl} />
                   <CopyRow label="Prompt" value={PROMPT} />
                 </div>
               )}

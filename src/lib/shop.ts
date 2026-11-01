@@ -51,20 +51,25 @@ export async function searchProducts(
   const filters = [eq(schema.products.sellerId, seller.id), eq(schema.products.active, true)];
   if (opts.maxPriceCents != null) filters.push(sql`${schema.products.priceCents} <= ${opts.maxPriceCents}`);
   const rows = await db.query.products.findMany({ where: and(...filters), orderBy: schema.products.priceCents });
+  return rankProducts(rows, opts.query).map(publicProduct);
+}
 
-  // Small catalogs, so rank in memory: a title match counts double, and more matched words rank higher.
-  const words = (opts.query ?? "").toLowerCase().split(/\W+/).filter((w) => w.length > 2);
-  if (!words.length) return rows.map(publicProduct);
-  const scored = rows.map((p) => {
-    const title = p.title.toLowerCase();
-    const body = `${p.description} ${Object.values(p.attributes).join(" ")}`.toLowerCase();
-    const score = words.reduce((s, w) => s + (title.includes(w) ? 2 : body.includes(w) ? 1 : 0), 0);
-    return { p, score };
-  });
-  return scored
+/**
+ * Keyword ranking for small catalogs, in memory: a title match counts double, and more matched words
+ * rank higher. No query keeps the given order. Shared by one shop's search and the marketplace's.
+ */
+export function rankProducts<T extends Product>(rows: T[], query?: string): T[] {
+  const words = (query ?? "").toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+  if (!words.length) return rows;
+  return rows
+    .map((p) => {
+      const title = p.title.toLowerCase();
+      const body = `${p.description} ${Object.values(p.attributes).join(" ")}`.toLowerCase();
+      return { p, score: words.reduce((s, w) => s + (title.includes(w) ? 2 : body.includes(w) ? 1 : 0), 0) };
+    })
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
-    .map((s) => publicProduct(s.p));
+    .map((s) => s.p);
 }
 
 export async function getProduct(seller: Seller, productId: string) {
@@ -211,7 +216,6 @@ export async function markPaid(
   });
 }
 
-/** Order status for a buyer or their AI, by our order id or the PayPal order id. No buyer PII. */
 /** Look up one of this shop's orders by our order id or the PayPal order id. */
 export async function findOrder(seller: Seller, id: string) {
   const isUuid = /^[0-9a-f-]{36}$/i.test(id);
@@ -223,6 +227,7 @@ export async function findOrder(seller: Seller, id: string) {
   });
 }
 
+/** Order status for a buyer or their AI, by our order id or the PayPal order id. No buyer PII. */
 export async function orderStatus(seller: Seller, id: string) {
   const order = await findOrder(seller, id);
   if (!order) return undefined;

@@ -43,7 +43,7 @@ export const FOOTER_COLUMNS: { title: string; links: [label: string, href: strin
   {
     title: "Developers",
     links: [
-      ["Demo shop MCP server", `/api/mcp/${DEMO_SELLER_SLUG}`],
+      ["MCP connectors", "/#developers"],
       ["llms.txt", "/llms.txt"],
       ["Source on GitHub", REPO_URL],
     ],

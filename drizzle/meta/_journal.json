@@ -43,6 +43,13 @@
       "when": 1793516490930,
       "tag": "0005_visitor_shops",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793531974512,
+      "tag": "0006_marketplace",
+      "breakpoints": true
     }
   ]
 }

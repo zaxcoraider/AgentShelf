@@ -76,6 +76,7 @@ const WIDGET = /* html */ `<!doctype html>
   .photo img.on { opacity: 1; }
   .photo svg { position: absolute; inset: 0; margin: auto; width: 44px; height: 44px; }
   .body { display: flex; flex: 1; flex-direction: column; gap: 6px; padding: 12px 14px 14px; min-width: 0; }
+  .from { color: var(--sub); font-size: 11px; letter-spacing: 0.02em; text-transform: uppercase; }
   .title { font-weight: 600; font-size: 14px; line-height: 1.3; }
   .meta { color: var(--sub); font-size: 12px; }
   .desc { color: var(--sub); font-size: 13px; display: none; }
@@ -170,6 +171,8 @@ function parse(result) {
     const body = el("div", "body");
     const a = p.attributes ?? {};
     const meta = [a.size, a.burnTime && a.burnTime + " burn", a.scent].filter(Boolean).join(" · ");
+    // Marketplace results carry their shop; a single shop's results don't need it on every card.
+    if (p.shop && p.shop.name) body.append(el("div", "from", p.shop.name));
     body.append(el("div", "title", p.title));
     if (meta) body.append(el("div", "meta", meta));
     if (p.description) body.append(el("div", "desc", p.description));

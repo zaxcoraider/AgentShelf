@@ -19,7 +19,9 @@ const TOOLS = [
 
 export default async function Connect() {
   const seller = await requireSeller();
-  const mcpUrl = `${await requestBaseUrl()}/api/mcp/${seller.slug}`;
+  const base = await requestBaseUrl();
+  const mcpUrl = `${base}/api/mcp/${seller.slug}`;
+  const marketplaceUrl = `${base}/api/mcp`;
   const isLocal = /^https?:\/\/(localhost|127\.|0\.0\.0\.0)/.test(mcpUrl);
 
   const assistants = await db
@@ -96,12 +98,29 @@ export default async function Connect() {
       <p className="text-sm opacity-60">{seller.name}</p>
       <h1 className="text-3xl font-semibold tracking-tight">Connect your AI</h1>
       <p className="mt-1 text-sm opacity-70">
-        Your shop has its own MCP server. Add it to any AI assistant and shoppers can browse, ask questions, and pay
-        with PayPal without leaving the chat.
+        Two ways AI shoppers reach you. Either way they can browse, ask questions, and pay with PayPal without leaving
+        the chat, and your own facts, refund rules and agent apply.
       </p>
 
-      <section className="mt-8 rounded-xl border border-stone-200 p-4 dark:border-stone-800">
-        <h2 className="text-sm font-medium opacity-70">Your shop&apos;s MCP URL</h2>
+      <section className="mt-8 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-medium text-cream">AgentShelf marketplace: one connector, every shop</h2>
+          <span className={`text-xs ${seller.marketplace ? "text-emerald-300" : "text-smoke"}`}>
+            {seller.marketplace ? "Your shop is listed" : "Your shop is not listed (Settings)"}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-smoke">
+          Shoppers add this once and search every AgentShelf shop at once, so they can find you without knowing your
+          shop first.
+        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <code className="min-w-0 flex-1 truncate rounded-md bg-stone-900 px-3 py-2 font-mono text-sm">{marketplaceUrl}</code>
+          <CopyButton text={marketplaceUrl} />
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-stone-200 p-4 dark:border-stone-800">
+        <h2 className="text-sm font-medium opacity-70">Your shop&apos;s own connector (just your shop, your name on it)</h2>
         <div className="mt-2 flex items-center gap-2">
           <code className="min-w-0 flex-1 truncate rounded-md bg-stone-100 px-3 py-2 font-mono text-sm dark:bg-stone-900">
             {mcpUrl}

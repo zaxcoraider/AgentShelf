@@ -99,7 +99,8 @@ export default async function Home() {
   const aiOrders = paid.filter((o) => o.channel === "ai_agent");
   const assistants = new Set(aiOrders.map((o) => o.agentName).filter(Boolean));
   const revenue = paid.reduce((sum, o) => sum + o.amountCents - o.refundedCents, 0);
-  const mcpUrl = `${await requestBaseUrl()}/api/mcp/${seller.slug}`;
+  // The marketplace connector (every shop). Each shop also has its own at /api/mcp/<shop>.
+  const mcpUrl = `${await requestBaseUrl()}/api/mcp`;
   const featured = products.filter((p) => p.imageUrl).slice(0, 3);
 
   // The hero demo uses a real product from the shop: a photographed one under $30 if there is one.
@@ -159,7 +160,7 @@ export default async function Home() {
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] py-1 pr-3 pl-1 text-xs text-smoke transition hover:border-white/20 hover:text-cream"
               >
                 <span className="rounded-full bg-ember/15 px-2 py-0.5 font-medium text-flame">New</span>
-                Every shop gets its own MCP server
+                One MCP connector for every shop, plus one per shop
               </Link>
               <h1 className="mt-6 text-5xl leading-[1.02] font-semibold tracking-[-0.045em] sm:text-6xl lg:text-[4.5rem]">
                 Your shop, buyable by AI assistants.
@@ -281,8 +282,9 @@ export default async function Home() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
               <SectionHead title="Try it with your own AI.">
-                Add this MCP server to Claude, ChatGPT, or any MCP app, then ask it to buy a candle. You approve the
-                payment with a PayPal sandbox account.
+                Add the AgentShelf marketplace to Claude, ChatGPT, or any MCP app: one connector searches every shop.
+                Ask it to find a gift, and approve the payment with a PayPal sandbox account. Each shop also has its own
+                connector at <code className="font-mono text-cream/80">/api/mcp/&lt;shop&gt;</code>.
               </SectionHead>
               <div className="mt-8 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] p-1.5 pl-4">
                 <code className="min-w-0 flex-1 truncate font-mono text-sm text-cream/90">{mcpUrl}</code>

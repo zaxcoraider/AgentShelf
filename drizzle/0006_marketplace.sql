@@ -1,0 +1,1 @@
+ALTER TABLE "sellers" ADD COLUMN "marketplace" boolean DEFAULT true NOT NULL;

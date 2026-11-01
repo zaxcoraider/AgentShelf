@@ -72,6 +72,7 @@ export async function updateSettings(_prev: SettingsState, form: FormData): Prom
       ownerName,
       shopPolicy: policy,
       refundAutoLimitCents: Math.round(refundLimitUsd * 100),
+      marketplace: form.get("marketplace") === "on",
     })
     .where(eq(schema.sellers.id, seller.id));
 

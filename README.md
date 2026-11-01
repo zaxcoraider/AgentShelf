@@ -13,7 +13,7 @@ Built for [Build What's Next with PayPal and AI](https://paypalaihackathon.devpo
 | | Feature | Where |
 | --- | --- | --- |
 | 📸 | **Photo → listing, priced against the market.** Drop in product photos; a vision model drafts the title, description, key details and size. **Channel3** image search finds similar products for sale online, and the suggested price is explained against their real range and median (shown with four example listings). Publishing creates the product in the seller's **PayPal catalog** via the Agent Toolkit. | `/seller/listings` |
-| 🤖 | **A shop AI assistants can buy from.** Every shop has its own MCP server: search, product details, the shop's policy, questions answered from it, checkout as a **PayPal order** the buyer approves, order status, and refund requests. | `/api/mcp/<shop>` |
+| 🤖 | **Shops AI assistants can buy from, through one connector or their own.** The **AgentShelf marketplace MCP** puts every listed shop behind one connector: search spans all shops and each result names its shop; product, checkout, order and refund tools find the right shop from the id, so each shop's own facts, refund rules and seller agent still decide. Every shop also has **its own MCP server** with the same tools. Checkout is a **PayPal order** per shop that the buyer approves. Sellers can opt out of the marketplace in Settings. | `/api/mcp`, `/api/mcp/<shop>` |
 | 🛍️ | **Product cards inside the chat (MCP Apps).** In Claude, ChatGPT, and other hosts that support MCP Apps, search results render as product cards with photos and a **Buy with PayPal** button. The card creates the PayPal order, opens PayPal for the buyer to approve, and flips to “Paid” once the payment is captured. Other assistants get the same data as text. | `src/lib/mcp/product-widget.ts` |
 | 🧭 | **Facts AI can't get wrong.** Each shop's shipping, returns, and materials are structured fields (`src/lib/shop-facts.ts`), served identically to people (storefront), AI assistants (`get_shop_policy`, `ask_seller`), crawlers (schema.org Product, Offer, shipping and return-policy JSON-LD), and `/llms.txt`. What a shop doesn't do is stated as plainly as what it does, so assistants say "no" instead of guessing. | `/llms.txt`, `/shop/<shop>/llms.txt` |
 | 🔌 | **Connect your AI.** The shop's MCP URL, a live connection test, and setup steps for Claude, Claude Desktop, Claude Code, ChatGPT, and Cursor. | `/seller/connect` |
@@ -105,7 +105,8 @@ flowchart LR
 
 **Hosted demo:** https://agentshelf-xsh7.onrender.com (Render, PayPal sandbox)
 
-- Demo shop MCP server: `https://agentshelf-xsh7.onrender.com/api/mcp/mayas-candles` (add it as a custom connector in Claude, or any MCP client)
+- **Marketplace MCP (every shop, one connector):** `https://agentshelf-xsh7.onrender.com/api/mcp` (add it as a custom connector in Claude, or any MCP client)
+- Demo shop's own MCP server: `https://agentshelf-xsh7.onrender.com/api/mcp/mayas-candles`
 - For AI assistants: [`/llms.txt`](https://agentshelf-xsh7.onrender.com/llms.txt)
 
 **Create your own shop** at [`/start`](https://agentshelf-xsh7.onrender.com/start): name it, pick the facts assistants will quote (where you ship, returns, materials), choose a password, and optionally start with three sample products. In about a minute you get your own storefront, your own MCP server, a seller agent, and the AG Studio dashboard. Demo shops run in the PayPal sandbox, share AgentShelf's sandbox business account for payments, and are deleted after 30 days.
