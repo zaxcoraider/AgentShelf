@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
+import { knownShops } from "@/lib/seller-auth";
 import { sellerAuthEnabled } from "@/lib/session";
 import { SignInForm } from "./form";
 
@@ -26,7 +27,7 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
             Sign in to Maya&apos;s Candles, the demo shop (judges: the password is in the Devpost submission), or to a
             shop you created.
           </p>
-          <SignInForm next={next} shop={shop} />
+          <SignInForm next={next} shop={shop} known={await knownShops()} />
         </div>
         <p className="mt-6 text-sm text-smoke">
           No shop yet?{" "}

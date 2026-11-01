@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "./db";
+import { DEMO_SELLER_SLUG } from "./seller-slug";
+
+export { DEMO_SELLER_SLUG };
 
 /** The demo seller. Seller pages get it through requireSeller (src/lib/seller-session.ts), which checks the sign-in. */
-export const DEMO_SELLER_SLUG = "mayas-candles";
-
 export async function currentSeller() {
   const seller = await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, DEMO_SELLER_SLUG) });
   if (!seller) throw new Error(`Demo seller "${DEMO_SELLER_SLUG}" is missing. Run npm run db:setup.`);
