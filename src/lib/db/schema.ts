@@ -84,6 +84,8 @@ export const sellers = pgTable("sellers", {
   visitor: boolean("visitor").notNull().default(false),
   /** Listed in the AgentShelf marketplace MCP (one connector across shops). Sellers can opt out in Settings. */
   marketplace: boolean("marketplace").notNull().default(true),
+  /** The seller's AG Studio dashboard (AgReportState), saved as they or the AI change it. Null = default layout. */
+  dashboardState: jsonb("dashboard_state").$type<unknown>(),
   /** scrypt hash ("scrypt$salt$hash") of a visitor shop's password. */
   passwordHash: text("password_hash"),
   /** Salted hash of the creator's IP, only to rate-limit shop creation. */

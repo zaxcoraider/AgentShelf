@@ -3,6 +3,7 @@
 import {
   type AgAiModel,
   type AgDataSourcesDefinition,
+  type AgReportState,
   type AgStudioApi,
   type AgStudioMode,
   AgStudioAiModule,
@@ -10,7 +11,7 @@ import {
   studioTheme,
 } from "ag-studio";
 import { AgStudio, AgStudioProvider, createWidgets } from "ag-studio-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard-data";
 import { initialReport } from "./report";
 import { aiSetup } from "./studio-ai";
@@ -51,18 +52,108 @@ const theme = studioTheme.withParams({
   chartPaletteFills5Color: "#78716c",
 });
 
+/** Where this shop's dashboard is saved: the database, or (for the read-only demo shop) this browser. */
+export type DashboardSave = { to: "server" } | { to: "browser"; key: string };
+
+const SAVE_DELAY_MS = 1500;
+
+/**
+ * The saved dashboard if it looks like one, with our pages always present and the side panels
+ * reset (so a dashboard saved mid-chat doesn't reopen with the chat panel out).
+ */
+function restore(saved: unknown): AgReportState {
+  const s = saved as AgReportState | null | undefined;
+  if (!s || !Array.isArray(s.pages) || typeof s.selectedPageId !== "string") return initialReport;
+  const missing = initialReport.pages.filter((p) => !s.pages.some((q) => q.id === p.id));
+  const pages = [...s.pages, ...missing];
+  const selectedPageId = pages.some((p) => p.id === s.selectedPageId) ? s.selectedPageId : initialReport.selectedPageId;
+  return { ...s, pages, selectedPageId, panels: initialReport.panels };
+}
+
+function readBrowser(key: string): unknown {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function StudioCanvas({
   data,
   licenseKey,
   models,
+  savedState,
+  save,
 }: {
   data: DashboardData;
   licenseKey?: string;
   models: AgAiModel[];
+  savedState?: unknown;
+  save: DashboardSave;
 }) {
+  // Read once: Studio takes initialState at creation only.
+  const [startState] = useState(() => restore(save.to === "browser" ? readBrowser(save.key) : savedState));
   const [mode, setMode] = useState<AgStudioMode>("view");
   const [asking, setAsking] = useState(false);
-  const [page, setPage] = useState<PageId>("overview");
+  const [page, setPage] = useState<PageId>(() =>
+    PAGES.some((p) => p.id === startState.selectedPageId) ? (startState.selectedPageId as PageId) : "overview",
+  );
+  const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const pending = useRef<{ timer: ReturnType<typeof setTimeout>; state: AgReportState } | null>(null);
+  // Studio echoes state as it loads (and after a reset); those aren't the seller's changes, so don't
+  // save them: a shop on the default layout keeps getting our latest default.
+  const quietUntil = useRef(0);
+
+  // Save a moment after the last change, so a burst of edits (or an agent placing widgets) is one write.
+  const persist = useCallback(
+    async (state: AgReportState) => {
+      if (save.to === "browser") {
+        try {
+          localStorage.setItem(save.key, JSON.stringify(state));
+          setSaved("saved");
+        } catch {
+          setSaved("error");
+        }
+        return;
+      }
+      setSaved("saving");
+      const res = await fetch("/api/seller/dashboard/state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+        keepalive: true,
+      }).catch(() => null);
+      setSaved(res?.ok ? "saved" : "error");
+    },
+    [save],
+  );
+  const onStateUpdated = useCallback(
+    (state: AgReportState) => {
+      if (Date.now() < quietUntil.current) return;
+      if (pending.current) clearTimeout(pending.current.timer);
+      const timer = setTimeout(() => {
+        pending.current = null;
+        void persist(state);
+      }, SAVE_DELAY_MS);
+      pending.current = { timer, state };
+    },
+    [persist],
+  );
+  // Leaving the page with a change still waiting: save it now.
+  useEffect(() => {
+    const flush = () => {
+      if (!pending.current) return;
+      clearTimeout(pending.current.timer);
+      void persist(pending.current.state);
+      pending.current = null;
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [persist]);
   // Studio treats a new object as new data, so keep the reference stable across renders.
   const sources = useMemo(() => data as unknown as AgDataSourcesDefinition, [data]);
   const style = useMemo(() => ({ height: "100%", width: "100%" }), []);
@@ -78,6 +169,23 @@ export default function StudioCanvas({
     api.setState({ ...api.getState(), selectedPageId: id });
     setPage(id);
   }, []);
+
+  const resetLayout = useCallback(async () => {
+    if (!confirm("Go back to the default dashboard? Widgets and charts you or the AI added will be removed.")) return;
+    if (pending.current) clearTimeout(pending.current.timer);
+    pending.current = null;
+    if (save.to === "browser") {
+      try {
+        localStorage.removeItem(save.key);
+      } catch {}
+    } else {
+      await fetch("/api/seller/dashboard/state", { method: "DELETE" }).catch(() => null);
+    }
+    quietUntil.current = Date.now() + 1500;
+    studio.current?.setState(initialReport);
+    setPage("overview");
+    setSaved("idle");
+  }, [save]);
 
   // Studio's chat panel lives in edit mode; "Ask AI" opens it with the building panels tucked away.
   const askAi = useCallback(() => {
@@ -123,6 +231,16 @@ export default function StudioCanvas({
               : "Drag widgets, add charts, or change what each one shows."}
         </p>
         <div className="flex items-center gap-2">
+          {saved !== "idle" && (
+            <span className={`text-xs ${saved === "error" ? "text-red-300" : "text-smoke"}`} role="status">
+              {saved === "saving" ? "Saving…" : saved === "saved" ? (save.to === "browser" ? "Saved in this browser" : "Saved") : "Couldn't save"}
+            </span>
+          )}
+          {mode === "edit" && (
+            <button type="button" onClick={resetLayout} className="rounded-full px-3 py-1.5 text-sm text-smoke transition hover:text-cream">
+              Reset layout
+            </button>
+          )}
           {ai && mode === "view" && (
             <button
               type="button"
@@ -150,10 +268,14 @@ export default function StudioCanvas({
       <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/[0.07]">
         <AgStudioProvider licenseKey={licenseKey} modules={AI_MODULES}>
           <AgStudio
-            onApiReady={(e) => (studio.current = e.api)}
+            onApiReady={(e) => {
+              studio.current = e.api;
+              quietUntil.current = Date.now() + 1500;
+            }}
             style={style}
             data={sources}
-            initialState={initialReport}
+            initialState={startState}
+            onStateUpdated={(e) => onStateUpdated(e.state)}
             mode={mode}
             theme={theme}
             ai={ai}

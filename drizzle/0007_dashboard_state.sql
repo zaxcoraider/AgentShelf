@@ -1,0 +1,1 @@
+ALTER TABLE "sellers" ADD COLUMN "dashboard_state" jsonb;

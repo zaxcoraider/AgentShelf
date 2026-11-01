@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { dashboardData } from "@/lib/dashboard-data";
-import { requireSeller } from "@/lib/seller-session";
+import { canEditShop, requireSeller } from "@/lib/seller-session";
 import { studioModels } from "@/lib/studio-agent/models";
 import { LiveUpdates } from "../inbox/live";
 import { SellerStudio } from "./studio";
@@ -27,7 +27,13 @@ export default async function Dashboard() {
         </p>
       )}
       <div className="mt-4 min-h-0 flex-1">
-        <SellerStudio data={data} licenseKey={process.env.AG_STUDIO_LICENSE_KEY || undefined} models={studioModels()} />
+        <SellerStudio
+          data={data}
+          licenseKey={process.env.AG_STUDIO_LICENSE_KEY || undefined}
+          models={studioModels()}
+          savedState={seller.dashboardState}
+          save={canEditShop(seller) ? { to: "server" } : { to: "browser", key: `agentshelf:dashboard:${seller.slug}` }}
+        />
       </div>
     </main>
   );
