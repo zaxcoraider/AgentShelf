@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { ActionError, approveAction, markShipped, rejectAction } from "@/lib/agent/actions";
+import { ActionError, approveAction, markShipped, PREVIEW_NOTE, previewRefund, previewTracking, rejectAction } from "@/lib/agent/actions";
 import { runSellerAgent } from "@/lib/agent/seller-agent";
 import { aiConfigured } from "@/lib/ai";
 import { db, schema } from "@/lib/db";
@@ -13,9 +13,12 @@ import { requireSeller } from "@/lib/seller-session";
 export type FormState = { ok: boolean; message: string } | null;
 
 /** Run a seller action, turning expected failures into a message for the form. */
-async function respond(run: () => Promise<{ message: string; action: { status: string } }>): Promise<FormState> {
+async function respond(
+  run: () => Promise<{ message: string; action: { status: string } } | { preview: string }>,
+): Promise<FormState> {
   try {
     const result = await run();
+    if ("preview" in result) return { ok: true, message: result.preview };
     revalidatePath("/seller/inbox");
     return { ok: result.action.status !== "failed" && result.action.status !== "blocked", message: result.message };
   } catch (err) {
@@ -33,13 +36,39 @@ async function ownAction(seller: Seller, actionId: string) {
   return action;
 }
 
+/** The order behind a queued action, when it's seeded demo history (see PREVIEW_NOTE). */
+async function demoOrder(orderId: string | null) {
+  const order = orderId ? await db.query.orders.findFirst({ where: eq(schema.orders.id, orderId) }) : undefined;
+  return order?.demo ? order : undefined;
+}
+
 export async function approve(_prev: FormState, form: FormData): Promise<FormState> {
   const seller = await requireSeller();
+  try {
+    const action = await ownAction(seller, String(form.get("actionId")));
+    const demo = await demoOrder(action.orderId);
+    if (demo) {
+      const amount = (action.input as { amountCents?: number } | null)?.amountCents;
+      return { ok: true, message: await previewRefund(seller, demo, amount, { approving: true }) };
+    }
+  } catch (err) {
+    if (err instanceof ActionError) return { ok: false, message: err.message };
+    throw err;
+  }
   return respond(async () => approveAction((await ownAction(seller, String(form.get("actionId")))).id));
 }
 
 export async function reject(_prev: FormState, form: FormData): Promise<FormState> {
   const seller = await requireSeller();
+  try {
+    const action = await ownAction(seller, String(form.get("actionId")));
+    if (await demoOrder(action.orderId)) {
+      return { ok: true, message: `Preview: rejecting would close this request with no money moved. ${PREVIEW_NOTE}` };
+    }
+  } catch (err) {
+    if (err instanceof ActionError) return { ok: false, message: err.message };
+    throw err;
+  }
   return respond(async () => rejectAction((await ownAction(seller, String(form.get("actionId")))).id, "Seller declined"));
 }
 
@@ -56,6 +85,7 @@ export async function ship(_prev: FormState, form: FormData): Promise<FormState>
       where: and(eq(schema.orders.id, orderId), eq(schema.orders.sellerId, seller.id)),
     });
     if (!order) throw new ActionError("That order no longer exists.");
+    if (order.demo) return { preview: previewTracking({ carrier, trackingNumber }) };
     return markShipped(order.id, { carrier, trackingNumber }, `${seller.ownerName ?? "Seller"} marked the order shipped.`);
   });
 }

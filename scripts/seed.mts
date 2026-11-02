@@ -6,7 +6,7 @@
  *      npm run db:seed -- --reset → deletes the shop (and its orders) first
  */
 import { existsSync, readFileSync } from "node:fs";
-import { and, asc, eq, isNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lt } from "drizzle-orm";
 import { db, schema } from "../src/lib/db";
 import { refreshShopMarket } from "../src/lib/market";
 
@@ -73,6 +73,68 @@ async function ensureDemoDisputes(sellerId: string) {
   return shipped.length;
 }
 
+/**
+ * The showcase Inbox always has something to try: two refund requests waiting for approval and two
+ * paid orders to ship, all on seeded demo orders. Acting on them is a preview (src/lib/agent/actions.ts),
+ * so they stay put for every judge. Tops up on every seed (each deploy); no-op when already there.
+ */
+async function ensureDemoInbox(sellerId: string) {
+  const demoOrders = await db.query.orders.findMany({
+    where: and(eq(schema.orders.sellerId, sellerId), eq(schema.orders.demo, true)),
+    orderBy: [desc(schema.orders.createdAt)],
+  });
+  const pending = await db.query.agentActions.findMany({
+    where: and(eq(schema.agentActions.sellerId, sellerId), eq(schema.agentActions.status, "pending_approval")),
+  });
+  const demoIds = new Set(demoOrders.map((o) => o.id));
+  let added = 0;
+
+  // Paid and waiting for tracking: the newest shipped demo orders with nothing but their seeded
+  // "tracking added" entry in the log. That entry goes too, so the log never contradicts the order.
+  const acted = await db.query.agentActions.findMany({
+    columns: { orderId: true, tool: true },
+    where: eq(schema.agentActions.sellerId, sellerId),
+  });
+  const busy = new Set(acted.filter((a) => a.tool !== "create_shipment_tracking").map((a) => a.orderId));
+  const toShip = demoOrders.filter((o) => o.status === "paid");
+  for (const o of demoOrders.filter((o) => o.status === "shipped" && !busy.has(o.id)).slice(0, Math.max(0, 2 - toShip.length))) {
+    await db.update(schema.orders).set({ status: "paid", carrier: null, trackingNumber: null }).where(eq(schema.orders.id, o.id));
+    await db
+      .delete(schema.agentActions)
+      .where(and(eq(schema.agentActions.orderId, o.id), eq(schema.agentActions.tool, "create_shipment_tracking")));
+    toShip.push(o);
+    added++;
+  }
+
+  if (!pending.some((a) => a.orderId && demoIds.has(a.orderId))) {
+    const shipped = demoOrders.filter((o) => o.status === "shipped" && !toShip.some((t) => t.id === o.id));
+    const big = [...shipped].sort((a, b) => b.amountCents - a.amountCents)[0];
+    const other = shipped.find((o) => o.id !== big?.id && o.channel === "ai_agent") ?? shipped.find((o) => o.id !== big?.id);
+    const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+    const requests = [
+      big && {
+        orderId: big.id,
+        input: { amountCents: big.amountCents, note: "Refund from Maya's Candles" },
+        reason:
+          `Buyer's assistant: "The jar arrived cracked. Photo attached." The policy offers a full refund or a replacement for ` +
+          `damaged items with a photo. ${dollars(big.amountCents)} is over the $30.00 auto-refund limit.`,
+      },
+      other && {
+        orderId: other.id,
+        input: { amountCents: 1200, note: "Refund from Maya's Candles" },
+        reason:
+          `Buyer's assistant: "The scent is much lighter than described." The policy doesn't cover scent preference, ` +
+          `so this is your call. I'd offer a $12.00 goodwill refund. The agent asked you to decide.`,
+      },
+    ].filter((r) => !!r);
+    for (const r of requests) {
+      await db.insert(schema.agentActions).values({ sellerId, tool: "refund_order", status: "pending_approval", ...r });
+      added++;
+    }
+  }
+  return added;
+}
+
 // Visitor shops (made on /start) past their expiry go, with their products, orders and agent log.
 const expired = await db
   .delete(schema.sellers)
@@ -84,6 +146,7 @@ const existing = await db.query.sellers.findFirst({ where: eq(schema.sellers.slu
 if (existing && !reset) {
   const attached = await attachSeedPhotos(existing.id);
   const disputed = await ensureDemoDisputes(existing.id);
+  const inbox = await ensureDemoInbox(existing.id);
   // Market watch for the demo shop, once (1 Channel3 credit per product; skipped without a key).
   if (process.env.CHANNEL3_API_KEY) {
     const market = await refreshShopMarket(existing.id, { onlyNew: true });
@@ -92,7 +155,7 @@ if (existing && !reset) {
   }
   console.log(
     `"${existing.name}" already seeded${attached ? `; added ${attached} product photos` : ""}` +
-      `${disputed ? `; added ${disputed} demo disputes` : ""}. Use --reset to recreate it.`,
+      `${disputed ? `; added ${disputed} demo disputes` : ""}${inbox ? `; added ${inbox} demo Inbox items` : ""}. Use --reset to recreate it.`,
   );
   process.exit(0);
 }
@@ -262,6 +325,7 @@ const disputeRows = orders
 if (disputeRows.length) await db.insert(schema.disputes).values(disputeRows);
 
 const photos = await attachSeedPhotos(seller.id);
+await ensureDemoInbox(seller.id);
 
 console.log(
   `Seeded "${seller.name}": ${products.length} products (${photos} with photos), ${orders.length} orders ` +

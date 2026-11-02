@@ -70,7 +70,8 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
       orderBy: desc(schema.agentActions.createdAt),
     }),
     db.query.orders.findMany({
-      where: and(eq(schema.orders.sellerId, seller.id), eq(schema.orders.status, "paid"), eq(schema.orders.demo, false)),
+      // Seeded demo orders included: shipping one is a preview that changes nothing.
+      where: and(eq(schema.orders.sellerId, seller.id), eq(schema.orders.status, "paid")),
       orderBy: desc(schema.orders.createdAt),
     }),
     db.query.agentActions.findMany({

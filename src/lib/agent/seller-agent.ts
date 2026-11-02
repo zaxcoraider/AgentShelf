@@ -9,7 +9,7 @@ import { CARRIERS, type Carrier } from "../paypal/client";
 import { paypalTools } from "../paypal/toolkit";
 import { findOrder } from "../shop";
 import { policyText } from "../shop-facts";
-import { markShipped, recordDisputeReview, requestRefund, type ActionResult } from "./actions";
+import { markShipped, PREVIEW_NOTE, previewRefund, previewTracking, recordDisputeReview, requestRefund, type ActionResult } from "./actions";
 import { DAILY_AUTO_REFUND_CAP_CENTS } from "./guardrails";
 import { disputeDueAt } from "../disputes";
 
@@ -37,7 +37,7 @@ function systemPrompt(seller: Seller) {
     "- Never refund an order that is in a dispute; review the dispute instead and record your recommendation with record_dispute_review.",
     "- Use lookup_order before acting on an order. Use the PayPal tools only to read (orders, refunds, shipments, disputes, transactions).",
     "- The shop's open disputes are in its own records: list_orders with status disputed, then lookup_order. Only use PayPal's dispute tools for details on a specific paypalDisputeId.",
-    "- Orders marked demo are seeded history with no real PayPal payment: you can read them but every action on them is blocked.",
+    "- Orders marked demo are seeded history with no real PayPal payment. Act on them exactly as you would on a real order: the tools answer with status \"preview\", saying what would have happened, and change nothing. Report it that way (\"would refund\", \"would go to approval\"), never as done.",
     `- Every reason you write is shown to ${owner}: one or two plain sentences, cite the policy line you relied on.`,
     `- Finish with a short summary for ${owner} of what you did and what needs them. Plain text only: no markdown (no **, #, or tables); short lines starting with "- " are fine.`,
   ].join("\n");
@@ -92,6 +92,8 @@ function sellerTools(seller: Seller): ToolSet {
     return order;
   };
   const result = (r: ActionResult) => ({ status: r.action.status, message: r.message });
+  // Seeded demo orders: report what would happen, change nothing (see PREVIEW_NOTE).
+  const preview = (message: string) => ({ status: "preview", message });
   const cents = (amount?: number) => (amount != null ? Math.round(amount * 100) : undefined);
 
   return {
@@ -128,21 +130,27 @@ function sellerTools(seller: Seller): ToolSet {
       description:
         "Refund an order through PayPal when the policy supports it. The shop's limits decide whether it runs now or waits for the seller's approval.",
       inputSchema: z.object({ order_id: z.string(), reason, amount_usd: money }),
-      execute: async ({ order_id, reason, amount_usd }) =>
-        result(await requestRefund((await own(order_id)).id, reason, { amountCents: cents(amount_usd), note: `Refund from ${seller.name}` })),
+      execute: async ({ order_id, reason, amount_usd }) => {
+        const order = await own(order_id);
+        if (order.demo) return preview(await previewRefund(seller, order, cents(amount_usd)));
+        return result(await requestRefund(order.id, reason, { amountCents: cents(amount_usd), note: `Refund from ${seller.name}` }));
+      },
     }),
     escalate_to_seller: tool({
       description:
         "Send a refund request to the seller to decide, with your recommendation (refund or decline). Use when the policy doesn't clearly cover it.",
       inputSchema: z.object({ order_id: z.string(), reason, amount_usd: money }),
-      execute: async ({ order_id, reason, amount_usd }) =>
-        result(
-          await requestRefund((await own(order_id)).id, reason, {
+      execute: async ({ order_id, reason, amount_usd }) => {
+        const order = await own(order_id);
+        if (order.demo) return preview(`Preview: this would go to the seller's approval queue with your recommendation. ${PREVIEW_NOTE}`);
+        return result(
+          await requestRefund(order.id, reason, {
             amountCents: cents(amount_usd),
             note: `Refund from ${seller.name}`,
             askSeller: true,
           }),
-        ),
+        );
+      },
     }),
     add_tracking: tool({
       description: "Mark an order shipped and attach the tracking number to its PayPal order (PayPal notifies the buyer).",
@@ -151,8 +159,11 @@ function sellerTools(seller: Seller): ToolSet {
         carrier: z.enum(Object.keys(CARRIERS) as [Carrier, ...Carrier[]]),
         tracking_number: z.string().regex(/^[A-Za-z0-9]{8,40}$/),
       }),
-      execute: async ({ order_id, carrier, tracking_number }) =>
-        result(await markShipped((await own(order_id)).id, { carrier, trackingNumber: tracking_number }, "Agent added tracking.")),
+      execute: async ({ order_id, carrier, tracking_number }) => {
+        const order = await own(order_id);
+        if (order.demo) return preview(previewTracking({ carrier, trackingNumber: tracking_number }));
+        return result(await markShipped(order.id, { carrier, trackingNumber: tracking_number }, "Agent added tracking."));
+      },
     }),
     record_dispute_review: tool({
       description:
@@ -163,7 +174,7 @@ function sellerTools(seller: Seller): ToolSet {
       }),
       execute: async ({ dispute_id, recommendation }) => {
         const [row] = await db
-          .select({ id: schema.disputes.id })
+          .select({ id: schema.disputes.id, demo: schema.orders.demo })
           .from(schema.disputes)
           .innerJoin(schema.orders, eq(schema.disputes.orderId, schema.orders.id))
           .where(
@@ -175,6 +186,7 @@ function sellerTools(seller: Seller): ToolSet {
             ),
           );
         if (!row) throw new Error(`No dispute ${dispute_id} in ${seller.name}.`);
+        if (row.demo) return preview(`Preview: your recommendation would be saved on the dispute for the seller. ${PREVIEW_NOTE}`);
         return result(await recordDisputeReview(row.id, recommendation));
       },
     }),

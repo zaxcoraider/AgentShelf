@@ -1,6 +1,6 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "../db";
-import type { AgentAction, Order } from "../db/schema";
+import type { AgentAction, Order, Seller } from "../db/schema";
 import { usd } from "../money";
 import { addOrderTracking, refundCapture, type Carrier } from "../paypal/client";
 import { decideRefund } from "./guardrails";
@@ -36,6 +36,36 @@ async function log(values: typeof schema.agentActions.$inferInsert) {
 }
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+/**
+ * Seeded demo orders have no PayPal payment behind them, and the showcase shop is shared by every
+ * judge. Acting on one is a preview: we say exactly what would happen on a real order and change
+ * nothing, so the approval queue and dispute notes look the same for the next visitor.
+ * Real orders (a judge's own sandbox purchase) still run for real.
+ */
+export const PREVIEW_NOTE = "This is seeded demo history, so nothing changed and the demo stays the same for everyone.";
+
+export async function previewRefund(seller: Pick<Seller, "id" | "refundAutoLimitCents">, order: Order, amountCents?: number, opts: { approving?: boolean } = {}) {
+  // Judge the order as if it had been paid through PayPal.
+  const asPaid = { ...order, demo: false, captureId: order.captureId ?? "preview" };
+  const decision = decideRefund({
+    seller: opts.approving ? { refundAutoLimitCents: Number.MAX_SAFE_INTEGER } : seller,
+    order: asPaid,
+    amountCents,
+    autoRefundedTodayCents: opts.approving ? 0 : await autoRefundedToday(seller.id),
+  });
+  const what =
+    decision.kind === "blocked"
+      ? `Preview: this refund would be refused (${decision.why})`
+      : decision.kind === "needs_approval" && !opts.approving
+        ? `Preview: this would go to the seller's approval queue (${decision.why})`
+        : `Preview: this would refund ${usd(decision.amountCents)} through PayPal right away${opts.approving ? "" : ` (${decision.why})`}`;
+  return `${what}. ${PREVIEW_NOTE}`;
+}
+
+export function previewTracking(input: { carrier: Carrier; trackingNumber: string }) {
+  return `Preview: this would add ${input.carrier} tracking ${input.trackingNumber} to the PayPal order, and PayPal would email the buyer. ${PREVIEW_NOTE}`;
+}
 
 /** Refunds the agent made on its own for this seller since midnight UTC. */
 export async function autoRefundedToday(sellerId: string) {
