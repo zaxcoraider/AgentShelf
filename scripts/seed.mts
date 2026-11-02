@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { and, asc, desc, eq, isNull, lt } from "drizzle-orm";
 import { db, schema } from "../src/lib/db";
 import { refreshShopMarket } from "../src/lib/market";
+import { ensureShowcaseShops } from "./showcase-shops.mjs";
 
 const SLUG = "mayas-candles";
 const reset = process.argv.includes("--reset");
@@ -141,6 +142,10 @@ const expired = await db
   .where(and(eq(schema.sellers.visitor, true), lt(schema.sellers.expiresAt, new Date())))
   .returning({ slug: schema.sellers.slug });
 if (expired.length) console.log(`Removed ${expired.length} expired visitor shops.`);
+
+// Other permanent shops for the marketplace (and the owner's Juniper Clay Studio kept alive).
+const showcase = await ensureShowcaseShops();
+if (showcase.length) console.log(`Showcase shops: ${showcase.join("; ")}.`);
 
 const existing = await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, SLUG) });
 if (existing && !reset) {
