@@ -1,4 +1,4 @@
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db, schema } from "../db";
 import type { AgentAction, Order, Seller } from "../db/schema";
 import { usd } from "../money";
@@ -35,7 +35,15 @@ async function log(values: typeof schema.agentActions.$inferInsert) {
   return action;
 }
 
-const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+/** A readable reason, including PayPal SDK errors whose message is empty but whose body names the issue. */
+function errorText(err: unknown) {
+  const api = err as { message?: string; statusCode?: number; result?: { name?: string; message?: string; details?: { issue?: string; description?: string }[] } };
+  const detail = api?.result?.details?.[0];
+  const fromPaypal = [api?.result?.name, detail?.issue, detail?.description ?? api?.result?.message].filter(Boolean).join(": ");
+  if (fromPaypal) return fromPaypal;
+  if (api?.message) return api.message;
+  return api?.statusCode ? `PayPal answered HTTP ${api.statusCode}.` : String(err);
+}
 
 /**
  * Seeded demo orders have no PayPal payment behind them, and the showcase shop is shared by every
@@ -68,10 +76,13 @@ export function previewTracking(input: { carrier: Carrier; trackingNumber: strin
 }
 
 /** Refunds the agent made on its own for this seller since midnight UTC. */
-export async function autoRefundedToday(sellerId: string) {
+type Db = typeof db;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+export async function autoRefundedToday(sellerId: string, exec: Db | Tx = db) {
   const midnight = new Date();
   midnight.setUTCHours(0, 0, 0, 0);
-  const [row] = await db
+  const [row] = await exec
     .select({ total: sql<number>`coalesce(sum((${schema.agentActions.input}->>'amountCents')::int), 0)` })
     .from(schema.agentActions)
     .where(
@@ -85,57 +96,107 @@ export async function autoRefundedToday(sellerId: string) {
   return Number(row?.total ?? 0);
 }
 
-/** Call PayPal, then record the refund on the order. `requestId` keeps retries from refunding twice. */
+const REFUNDABLE: Order["status"][] = ["paid", "shipped", "partially_refunded"];
+
+/**
+ * Take the amount out of what's left on the order in one atomic UPDATE, before PayPal is called.
+ * Two refunds racing for the same order can't both pass: the second sees the first's reservation.
+ * Returns false when the order changed underneath us (already refunded, disputed, ...).
+ */
+async function reserveRefund(exec: Db | Tx, orderId: string, amountCents: number) {
+  const [row] = await exec
+    .update(schema.orders)
+    .set({ refundedCents: sql`${schema.orders.refundedCents} + ${amountCents}`, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.orders.id, orderId),
+        inArray(schema.orders.status, REFUNDABLE),
+        sql`${schema.orders.refundedCents} + ${amountCents} <= ${schema.orders.amountCents}`,
+      ),
+    )
+    .returning({ id: schema.orders.id });
+  return Boolean(row);
+}
+
+/**
+ * Call PayPal for an already-reserved amount. If PayPal refuses, the reservation is given back.
+ * Once PayPal has refunded, the reservation stands whatever happens next: our record must never
+ * say less was refunded than PayPal did.
+ */
 async function executeRefund(order: Order, amountCents: number, note: string | undefined, requestId: string) {
-  const refund = await refundCapture({ captureId: order.captureId!, amountCents, note, requestId });
-  const refundedCents = order.refundedCents + amountCents;
+  let refund;
+  try {
+    refund = await refundCapture({ captureId: order.captureId!, amountCents, note, requestId });
+  } catch (err) {
+    await db
+      .update(schema.orders)
+      .set({ refundedCents: sql`greatest(${schema.orders.refundedCents} - ${amountCents}, 0)`, updatedAt: new Date() })
+      .where(eq(schema.orders.id, order.id));
+    throw err;
+  }
   await db
     .update(schema.orders)
     .set({
-      refundedCents,
-      status: refundedCents >= order.amountCents ? "refunded" : "partially_refunded",
+      status: sql`(case when ${schema.orders.refundedCents} >= ${schema.orders.amountCents} then 'refunded' else 'partially_refunded' end)::order_status`,
       updatedAt: new Date(),
     })
-    .where(eq(schema.orders.id, order.id));
+    .where(eq(schema.orders.id, order.id))
+    .catch((err) => console.error(`[refund] PayPal refunded order ${order.id} but its status didn't update:`, err));
   return refund;
 }
+
+const CHANGED = "The order changed while this was being decided (another refund or a dispute). Nothing was refunded.";
 
 /**
  * The agent asks to refund an order. Guardrails decide: refund now, queue for the
  * seller, or refuse. `reason` is the agent's own explanation, shown to the seller.
  */
 export async function requestRefund(orderId: string, reason: string, input: RefundInput = {}): Promise<ActionResult> {
-  const { order, seller } = await loadOrder(orderId);
-  const decision = decideRefund({
-    seller,
-    order,
-    amountCents: input.amountCents,
-    autoRefundedTodayCents: await autoRefundedToday(seller.id),
+  const { seller } = await loadOrder(orderId);
+  const base = { sellerId: seller.id, orderId, tool: "refund_order" };
+
+  // One refund decision per shop at a time: locking the seller row serializes the daily-cap check,
+  // and the order is re-read inside the lock so the decision sees any refund that just landed.
+  const decided = await db.transaction(async (tx) => {
+    await tx.select({ id: schema.sellers.id }).from(schema.sellers).where(eq(schema.sellers.id, seller.id)).for("update");
+    const order = (await tx.query.orders.findFirst({ where: eq(schema.orders.id, orderId) }))!;
+    const decision = decideRefund({
+      seller,
+      order,
+      amountCents: input.amountCents,
+      autoRefundedTodayCents: await autoRefundedToday(seller.id, tx),
+    });
+    const log = async (values: Omit<typeof schema.agentActions.$inferInsert, "sellerId" | "orderId" | "tool">) =>
+      (await tx.insert(schema.agentActions).values({ ...base, ...values }).returning())[0];
+
+    if (decision.kind === "blocked") {
+      const action = await log({ input, status: "blocked", reason: `${reason} Blocked: ${decision.why}` });
+      return { done: { action, message: `Refund blocked: ${decision.why}` } };
+    }
+    const actionInput = { amountCents: decision.amountCents, note: input.note };
+    if (decision.kind === "needs_approval" || input.askSeller) {
+      const why = decision.kind === "needs_approval" ? decision.why : "The agent asked you to decide.";
+      const action = await log({ input: actionInput, status: "pending_approval", reason: `${reason} ${why}` });
+      return { done: { action, message: `Sent to the seller for approval: ${why}` } };
+    }
+    if (!(await reserveRefund(tx, order.id, decision.amountCents))) {
+      const action = await log({ input: actionInput, status: "blocked", reason: `${reason} Blocked: ${CHANGED}` });
+      return { done: { action, message: `Refund blocked: ${CHANGED}` } };
+    }
+    const action = await log({ input: actionInput, status: "auto", reason: `${reason} ${decision.why}` });
+    return { refund: { action, order, amountCents: decision.amountCents } };
   });
-  const base = { sellerId: seller.id, orderId: order.id, tool: "refund_order" };
+  if (decided.done) return decided.done;
 
-  if (decision.kind === "blocked") {
-    const action = await log({ ...base, input, status: "blocked", reason: `${reason} Blocked: ${decision.why}` });
-    return { action, message: `Refund blocked: ${decision.why}` };
-  }
-
-  const actionInput = { amountCents: decision.amountCents, note: input.note };
-  if (decision.kind === "needs_approval" || input.askSeller) {
-    const why = decision.kind === "needs_approval" ? decision.why : "The agent asked you to decide.";
-    const action = await log({ ...base, input: actionInput, status: "pending_approval", reason: `${reason} ${why}` });
-    return { action, message: `Sent to the seller for approval: ${why}` };
-  }
-
-  // Log first so the action id doubles as PayPal's idempotency key.
-  const action = await log({ ...base, input: actionInput, status: "auto", reason: `${reason} ${decision.why}` });
+  const { action, order, amountCents } = decided.refund!;
   try {
-    const refund = await executeRefund(order, decision.amountCents, input.note, action.id);
+    const refund = await executeRefund(order, amountCents, input.note, action.id);
     const [done] = await db
       .update(schema.agentActions)
       .set({ output: refund })
       .where(eq(schema.agentActions.id, action.id))
       .returning();
-    return { action: done, message: `Refunded ${usd(decision.amountCents)} (PayPal refund ${refund.refundId}).` };
+    return { action: done, message: `Refunded ${usd(amountCents)} (PayPal refund ${refund.refundId}).` };
   } catch (err) {
     const [failed] = await db
       .update(schema.agentActions)
@@ -172,6 +233,7 @@ export async function approveAction(actionId: string): Promise<ActionResult> {
       autoRefundedTodayCents: 0,
     });
     if (recheck.kind === "blocked") throw new ActionError(recheck.why);
+    if (!(await reserveRefund(db, order.id, recheck.amountCents))) throw new ActionError(CHANGED);
     const refund = await executeRefund(order, recheck.amountCents, input.note, action.id);
     const [done] = await db
       .update(schema.agentActions)
