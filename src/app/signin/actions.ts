@@ -28,7 +28,7 @@ export async function signIn(_prev: SignInState, form: FormData): Promise<SignIn
     await new Promise((r) => setTimeout(r, 800));
     return { message: seller ? "That password isn't right." : "No shop with that name. Check the spelling, or create one." };
   }
-  await startSession(seller.slug);
+  await startSession(seller);
   redirect(safeNext(form.get("next")));
 }
 

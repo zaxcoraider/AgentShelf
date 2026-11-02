@@ -21,10 +21,10 @@ export function shopSlug(input: string) {
 }
 
 /** Sign this browser in as the given shop. Call only after verifying the shop's password. */
-export async function startSession(slug: string) {
+export async function startSession({ slug, id }: { slug: string; id: string }) {
   const jar = await cookies();
   const cookie = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" };
-  jar.set(SESSION_COOKIE, await createSessionToken(slug), { ...cookie, maxAge: SESSION_DAYS * 86_400 });
+  jar.set(SESSION_COOKIE, await createSessionToken({ slug, id }), { ...cookie, maxAge: SESSION_DAYS * 86_400 });
   const known = [slug, ...readKnown(jar.get(KNOWN_COOKIE)?.value).filter((s) => s !== slug)].slice(0, KNOWN_MAX);
   jar.set(KNOWN_COOKIE, known.join(","), { ...cookie, maxAge: 60 * 86_400 });
 }

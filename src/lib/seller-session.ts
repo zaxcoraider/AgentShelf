@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "./db";
@@ -17,8 +17,10 @@ export async function requireSeller() {
 
 /** The signed-in seller, or null. For route handlers, which answer 401 instead of redirecting. */
 export async function sessionSeller() {
-  const slug = await verifySessionToken((await cookies()).get(SESSION_COOKIE)?.value);
-  const seller = slug ? await db.query.sellers.findFirst({ where: eq(schema.sellers.slug, slug) }) : undefined;
+  const session = await verifySessionToken((await cookies()).get(SESSION_COOKIE)?.value);
+  const seller = session
+    ? await db.query.sellers.findFirst({ where: and(eq(schema.sellers.id, session.id), eq(schema.sellers.slug, session.slug)) })
+    : undefined;
   if (seller && !(seller.expiresAt && seller.expiresAt.getTime() < Date.now())) return seller;
   // Local runs without a demo password: the seller pages are open and show the showcase shop.
   return sellerAuthEnabled() ? null : currentSeller();

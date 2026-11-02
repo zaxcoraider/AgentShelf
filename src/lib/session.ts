@@ -28,12 +28,16 @@ function sameText(a: string, b: string) {
 }
 
 /**
- * What session cookies are signed with: SESSION_SECRET if set, else the demo password (so
- * changing it signs everyone out). Locally, with neither set, a fixed dev key, so visitor
- * shops created on a laptop can still sign in.
+ * What session cookies are signed with. Never the demo password: judges are given it, and anyone
+ * who knows the signing key can forge a cookie for any shop. SESSION_SECRET if set, else a key
+ * derived from the PayPal client secret (never shared, already on every deploy). Locally, with
+ * neither set, a fixed dev key, so visitor shops created on a laptop can still sign in.
  */
 function sessionSecret() {
-  return process.env.SESSION_SECRET || process.env.SELLER_DEMO_PASSWORD || "agentshelf-local-dev-only";
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+  if (process.env.PAYPAL_CLIENT_SECRET) return `derived-from-paypal:${process.env.PAYPAL_CLIENT_SECRET}`;
+  if (process.env.NODE_ENV === "production") throw new Error("Set SESSION_SECRET to sign seller sessions.");
+  return "agentshelf-local-dev-only";
 }
 
 async function sign(payload: string) {
@@ -54,14 +58,20 @@ export async function checkPassword(attempt: string) {
   return sameText(await digest(attempt), await digest(expected));
 }
 
-export async function createSessionToken(sellerSlug: string) {
-  const payload = `${sellerSlug}.${Date.now() + SESSION_DAYS * 86_400_000}`;
+/**
+ * Token = "<slug>.<seller id>.<expiry>.<signature>". The seller id (a UUID) pins the session to
+ * this exact shop, so a cookie can't open a later shop that reuses an expired shop's name.
+ */
+export async function createSessionToken(seller: { slug: string; id: string }) {
+  const payload = `${seller.slug}.${seller.id}.${Date.now() + SESSION_DAYS * 86_400_000}`;
   return `${payload}.${await sign(payload)}`;
 }
 
-/** The seller slug a valid, unexpired token belongs to; null otherwise. */
-export async function verifySessionToken(token: string | undefined): Promise<string | null> {
-  const [slug, expires, signature] = token?.split(".") ?? [];
-  if (!slug || !expires || !signature || Number(expires) < Date.now()) return null;
-  return sameText(signature, await sign(`${slug}.${expires}`)) ? slug : null;
+/** The shop a valid, unexpired token belongs to; null otherwise. */
+export async function verifySessionToken(token: string | undefined): Promise<{ slug: string; id: string } | null> {
+  const parts = token?.split(".") ?? [];
+  if (parts.length !== 4) return null;
+  const [slug, id, expires, signature] = parts;
+  if (!slug || !id || !expires || !signature || !(Number(expires) > Date.now())) return null;
+  return sameText(signature, await sign(`${slug}.${id}.${expires}`)) ? { slug, id } : null;
 }

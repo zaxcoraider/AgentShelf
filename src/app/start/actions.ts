@@ -120,7 +120,7 @@ export async function createShop(_prev: CreateShopState, form: FormData): Promis
 
   if (samples) refreshInBackground(() => refreshShopMarket(seller.id, { onlyNew: true }));
 
-  await startSession(seller.slug);
+  await startSession(seller);
   redirect("/seller/welcome");
 }
 
