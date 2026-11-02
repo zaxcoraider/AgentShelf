@@ -213,7 +213,7 @@ AgentShelf runs on **Render** from a Blueprint ([`render.yaml`](render.yaml)): a
 | AG Studio dashboard agents (our lead, our PayPal agent, Studio's built-ins) | `deepseek-ai/DeepSeek-V4.1-Flash-1017` | [`studio-ai.ts`](src/app/seller/dashboard/studio-ai.ts) |
 | Photo → listing (vision, structured output), priced with Channel3 | `moonshotai/Kimi-K3` | [`listings.ts`](src/lib/listings.ts) |
 
-Models were picked by testing on our own tasks: streamed tool calls and strict JSON. When Nebius deprecated our first model on Nov 1, we benchmarked four replacements and moved to the fastest (0.5–0.7 s per tool call). All AI calls go through one OpenAI-compatible module ([`src/lib/ai.ts`](src/lib/ai.ts)) with a fallback provider, so changing models is a settings change.
+Models were picked by testing on our own tasks: streamed tool calls and strict JSON. When Nebius deprecated our first model on Nov 1, we benchmarked four replacements and moved to the fastest (0.5–0.7 s per tool call). All AI calls go through one OpenAI-compatible module ([`src/lib/ai.ts`](src/lib/ai.ts)) with a backup provider: if Nebius fails, the same call retries on **Gemini 3.5 Flash through the DGrid AI gateway**, the only one of 8 backup models we tested that passed all four checks (text, strict JSON, tool calls, vision). Changing models is a settings change.
 
 **Facts AI can't get wrong.** Each shop's shipping, returns and materials are structured fields ([`shop-facts.ts`](src/lib/shop-facts.ts)), served the same way to people (storefront), assistants (`get_shop_policy`, `ask_seller`), search engines (schema.org JSON-LD) and [`/llms.txt`](https://agentshelf-xsh7.onrender.com/llms.txt). What a shop doesn't do is stated as plainly as what it does.
 
@@ -262,13 +262,17 @@ Demo shops run in the PayPal sandbox: no real money moves. The demo shop is read
       • Live on Render, deployed on every push
     </td>
     <td>
-      • <b>Sellers paid directly</b>: each shop connects its own PayPal account through PayPal's platform onboarding<br>
-      • <b>Agent answers disputes with evidence</b>, after the seller approves<br>
+      • <b>Sellers get paid</b>: AgentShelf collects each sale, then the seller agent pays the shop's PayPal account with <b>PayPal Payouts</b> after shipping, minus a small fee. Refunds and disputes stay with the agent<br>
+      • <b>Agent answers disputes with evidence</b> (tracking), after the seller approves<br>
       • <b>Invoices for custom orders</b> drafted by the agent<br>
-      • <b>Morning brief</b> from the seller agent (Render cron)
+      • <b>Pay Later messaging</b> on every storefront<br>
+      • <b>One shelf photo → many listings</b> with Channel3<br>
+      • <b>Dashboard widgets that filter each other</b> on click, plus an AI usage meter (AG Studio)<br>
+      • <b>Morning brief</b> from the seller agent and nightly cleanup (Render cron jobs)
     </td>
     <td>
       • Listing in the Claude and ChatGPT app directories<br>
+      • <b>Each shop connects its own PayPal account</b> (PayPal Multiparty onboarding), once approved as a PayPal partner<br>
       • Pilot with real independent sellers<br>
       • Import from Etsy and Shopify<br>
       • More currencies and countries<br>
