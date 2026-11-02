@@ -107,7 +107,8 @@ export async function ensureShowcaseShops() {
       await addProducts(juniper.id, mugs);
       notes.push(`added ${mugs.length} mugs to Juniper`);
     }
-    // One listing was published twice, the second with a cut-off title. Remove it if it never sold.
+    // One listing was published twice, the second with a cut-off title. Remove it, or hide it if it
+    // has orders (even an unpaid checkout), so the order history keeps its product.
     const dupe = await db.query.products.findFirst({
       where: and(eq(schema.products.sellerId, juniper.id), eq(schema.products.title, "Deep Blue Stoneware Nesting Bowl Set,")),
     });
@@ -116,6 +117,9 @@ export async function ensureShowcaseShops() {
       if (n === 0) {
         await db.delete(schema.products).where(eq(schema.products.id, dupe.id));
         notes.push("removed Juniper's duplicate bowl set");
+      } else if (dupe.active) {
+        await db.update(schema.products).set({ active: false }).where(eq(schema.products.id, dupe.id));
+        notes.push("hid Juniper's duplicate bowl set (it has orders)");
       }
     }
   }
