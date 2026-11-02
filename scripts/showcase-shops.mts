@@ -7,7 +7,7 @@
  * mugs its tagline promises, and removes its one accidental duplicate listing.
  */
 import { readFileSync } from "node:fs";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "../src/lib/db";
 import type { ShopPolicy } from "../src/lib/db/schema";
 import { SAMPLE_PRODUCTS, type SampleProduct } from "../src/app/start/samples";
@@ -93,7 +93,36 @@ export async function ensureShowcaseShops() {
   }
 
   // The owner's own Juniper Clay Studio: keep it through judging, with the mugs its tagline promises.
-  const juniper = await db.query.sellers.findFirst({ where: eq(schema.sellers.name, "Juniper Clay Studio") });
+  // There can be more than one shop with that name (made twice on /start): the real one has the most products.
+  const junipers = await db
+    .select({ seller: schema.sellers, products: count(schema.products.id) })
+    .from(schema.sellers)
+    .leftJoin(schema.products, eq(schema.products.sellerId, schema.sellers.id))
+    .where(eq(schema.sellers.name, "Juniper Clay Studio"))
+    .groupBy(schema.sellers.id)
+    .orderBy(desc(count(schema.products.id)));
+  const juniper = junipers[0]?.seller;
+
+  // Undo an earlier run that picked an empty duplicate Juniper by name: take back the sample mugs
+  // it was given (if unsold) and restore its 30-day expiry.
+  const mugTitles = SAMPLE_PRODUCTS.ceramics.filter((p) => /mug|cup/i.test(p.title)).map((p) => p.title);
+  for (const { seller: other } of junipers.slice(1)) {
+    const given = await db.query.products.findMany({
+      where: and(eq(schema.products.sellerId, other.id), inArray(schema.products.title, mugTitles)),
+    });
+    for (const p of given) {
+      const [{ n }] = await db.select({ n: count() }).from(schema.orders).where(eq(schema.orders.productId, p.id));
+      if (n === 0) await db.delete(schema.products).where(eq(schema.products.id, p.id));
+    }
+    if (other.visitor && !other.expiresAt) {
+      await db
+        .update(schema.sellers)
+        .set({ expiresAt: new Date(other.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000) })
+        .where(eq(schema.sellers.id, other.id));
+    }
+    if (given.length) notes.push(`restored the empty duplicate shop ${other.slug}`);
+  }
+
   if (juniper) {
     if (juniper.expiresAt) {
       await db.update(schema.sellers).set({ expiresAt: null }).where(eq(schema.sellers.id, juniper.id));
