@@ -4,7 +4,7 @@ import type { LanguageModel } from "ai";
 /**
  * Every AI call in AgentShelf goes through this module.
  * Primary provider: any OpenAI-compatible gateway (Nebius Token Factory today).
- * Fallback: any other OpenAI-compatible endpoint (e.g. Anthropic's).
+ * Fallback: any other OpenAI-compatible endpoint (DGrid AI gateway today).
  * Swapping gateway or models is a config change, never a code change.
  */
 
@@ -37,6 +37,7 @@ const fallback = () =>
         name: "fallback",
         baseURL: process.env.AI_FALLBACK_BASE_URL,
         apiKey: process.env.AI_FALLBACK_API_KEY,
+        supportsStructuredOutputs: true,
       })
     : null;
 
