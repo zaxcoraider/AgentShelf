@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { aiConfigured, withFallback } from "./ai";
-import { takeAiCall } from "./rate-limit";
+import { takeAiCall, takeCheckout } from "./rate-limit";
 import { db, schema } from "./db";
 import type { Order, Product, Seller } from "./db/schema";
 import { usd } from "./money";
@@ -116,7 +116,7 @@ export async function askSeller(seller: Seller, question: string, product?: Prod
 /** Create a PayPal order for one product and record it. Returns the link the buyer approves. */
 export async function startCheckout(
   seller: Seller,
-  opts: { productId: string; quantity: number; channel: CheckoutChannel; agentName?: string },
+  opts: { productId: string; quantity: number; channel: CheckoutChannel; agentName?: string; caller?: string },
 ) {
   const product = await getProduct(seller, opts.productId);
   if (!product || !product.active) throw new ShopError(`No product with id ${opts.productId} in ${seller.name}.`);
@@ -125,6 +125,10 @@ export async function startCheckout(
   }
   if (product.stock < opts.quantity) {
     throw new ShopError(`Only ${product.stock} of "${product.title}" left in stock.`);
+  }
+  if (opts.caller) {
+    const allowed = takeCheckout(opts.caller);
+    if (!allowed.ok) throw new ShopError(allowed.message);
   }
 
   const amountCents = product.priceCents * opts.quantity + shippingCents(seller);

@@ -39,6 +39,25 @@ function take(key: string, { max, windowMs }: { max: number; windowMs: number },
   return { ok: true as const };
 }
 
+/** Checkouts (unpaid PayPal orders) per visitor per hour, and for the whole site per day. */
+export const CHECKOUT_LIMITS = {
+  perVisitor: { max: 60, windowMs: HOUR },
+  siteDaily: { max: 3_000, windowMs: DAY },
+} as const;
+
+/** Count one checkout for `who` (a visitor IP). Generous: a real shopper makes a handful. */
+export function takeCheckout(who: string, now = Date.now()): LimitResult {
+  if (windows.size > 50_000) sweep(now);
+  const mine = take(`checkout:${who}`, CHECKOUT_LIMITS.perVisitor, now);
+  if (!mine.ok) {
+    const minutes = Math.max(1, Math.ceil(mine.retryAfterSec / 60));
+    return { ok: false, retryAfterSec: mine.retryAfterSec, message: `Too many checkouts started from here. Try again in ${minutes} min.` };
+  }
+  const site = take("checkout:site", CHECKOUT_LIMITS.siteDaily, now);
+  if (!site.ok) return { ok: false, retryAfterSec: site.retryAfterSec, message: "Checkout is paused for today on this demo. Try again tomorrow." };
+  return { ok: true };
+}
+
 export type LimitResult = { ok: true } | { ok: false; retryAfterSec: number; message: string };
 
 /**

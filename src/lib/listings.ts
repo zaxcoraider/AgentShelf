@@ -39,8 +39,18 @@ export type ListingDraft = z.infer<typeof listingDraft>;
 
 export class ListingError extends Error {}
 
+/** The file really is the image type it claims: browsers only report what the file name says. */
+function looksLike(data: Buffer, mediaType: string) {
+  if (mediaType === "image/jpeg") return data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+  if (mediaType === "image/png") return data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mediaType === "image/webp") return data.toString("latin1", 0, 4) === "RIFF" && data.toString("latin1", 8, 12) === "WEBP";
+  return false;
+}
+
 function checkImage(image: { data: Buffer; mediaType: string }) {
-  if (!IMAGE_TYPES.includes(image.mediaType)) throw new ListingError("Use a JPEG, PNG, or WebP photo.");
+  if (!IMAGE_TYPES.includes(image.mediaType) || !looksLike(image.data, image.mediaType)) {
+    throw new ListingError("Use a JPEG, PNG, or WebP photo.");
+  }
   if (image.data.length > MAX_IMAGE_BYTES) throw new ListingError("That photo is too large (3 MB max).");
 }
 

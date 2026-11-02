@@ -224,6 +224,7 @@ export function createMarketplaceServer(opts: { detectedAgent?: string; caller?:
         const checkout = await startCheckout(found.seller, {
           productId: product_id,
           quantity,
+          caller: opts.caller,
           channel: "ai_agent",
           agentName: assistant_name?.trim() || opts.detectedAgent || "AI assistant",
         });

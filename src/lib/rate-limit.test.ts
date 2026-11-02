@@ -32,3 +32,13 @@ test("client IP comes from the first forwarded address", () => {
   assert.equal(clientIp(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" })), "203.0.113.7");
   assert.equal(clientIp(new Headers()), "unknown");
 });
+
+test("checkouts: a shopper gets plenty, a spam loop is stopped", async () => {
+  const { CHECKOUT_LIMITS, takeCheckout } = await import("./rate-limit");
+  const now = 1_000_000;
+  for (let i = 0; i < CHECKOUT_LIMITS.perVisitor.max; i++) assert.equal(takeCheckout("ip:1.2.3.4", now).ok, true);
+  assert.equal(takeCheckout("ip:1.2.3.4", now).ok, false);
+  assert.equal(takeCheckout("ip:5.6.7.8", now).ok, true);
+  // Checkouts don't eat into the AI allowance.
+  assert.equal(takeAiCall("ask", "ip:1.2.3.4", now).ok, true);
+});

@@ -217,6 +217,7 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string;
         const checkout = await startCheckout(seller, {
           productId: product_id,
           quantity,
+          caller: opts.caller,
           channel: "ai_agent",
           agentName: assistant_name?.trim() || opts.detectedAgent || "AI assistant",
         });
