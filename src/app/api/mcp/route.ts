@@ -1,5 +1,6 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createMarketplaceServer } from "@/lib/mcp/marketplace-server";
+import { clientIp } from "@/lib/rate-limit";
 import { agentFromUserAgent } from "@/lib/mcp/shop-server";
 
 /**
@@ -10,7 +11,10 @@ import { agentFromUserAgent } from "@/lib/mcp/shop-server";
 export const dynamic = "force-dynamic";
 
 async function handle(request: Request) {
-  const server = createMarketplaceServer({ detectedAgent: agentFromUserAgent(request.headers.get("user-agent")) });
+  const server = createMarketplaceServer({
+    detectedAgent: agentFromUserAgent(request.headers.get("user-agent")),
+    caller: `ip:${clientIp(request.headers)}`,
+  });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   return transport.handleRequest(request);

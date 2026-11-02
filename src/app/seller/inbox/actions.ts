@@ -8,6 +8,7 @@ import { aiConfigured } from "@/lib/ai";
 import { db, schema } from "@/lib/db";
 import type { Seller } from "@/lib/db/schema";
 import { CARRIERS, type Carrier } from "@/lib/paypal/client";
+import { takeAiCall } from "@/lib/rate-limit";
 import { requireSeller } from "@/lib/seller-session";
 
 export type FormState = { ok: boolean; message: string } | null;
@@ -98,6 +99,8 @@ export async function askAgent(_prev: AgentState, form: FormData): Promise<Agent
   const task = String(form.get("task") ?? "").trim().slice(0, 1000);
   if (task.length < 3) return { ok: false, text: "Tell the agent what to do.", tools: [] };
   if (!aiConfigured("agent")) return { ok: false, text: "No AI model is configured yet (AI_MODEL_AGENT).", tools: [] };
+  const allowed = takeAiCall("agent", seller.id);
+  if (!allowed.ok) return { ok: false, text: allowed.message, tools: [] };
   try {
     const run = await runSellerAgent(seller, task);
     revalidatePath("/seller/inbox");

@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { aiConfigured, withFallback } from "./ai";
+import { takeAiCall } from "./rate-limit";
 import { db, schema } from "./db";
 import type { Order, Product, Seller } from "./db/schema";
 import { usd } from "./money";
@@ -84,7 +85,7 @@ export async function getProduct(seller: Seller, productId: string) {
  * Answer a shopper's question from the seller's policy and listing data only.
  * Without an AI model configured, returns the facts so the calling assistant can answer itself.
  */
-export async function askSeller(seller: Seller, question: string, product?: Product) {
+export async function askSeller(seller: Seller, question: string, product?: Product, opts: { caller?: string } = {}) {
   const facts = [
     `Shop: ${seller.name}. ${seller.tagline ?? ""}`,
     `Shop policy:\n${policyText(seller)}`,
@@ -95,6 +96,8 @@ export async function askSeller(seller: Seller, question: string, product?: Prod
     .join("\n\n");
 
   if (!aiConfigured("fast")) return { answer: null, facts };
+  // Over the fair-use limit, the calling assistant gets the facts and answers itself.
+  if (opts.caller && !takeAiCall("ask", opts.caller).ok) return { answer: null, facts };
 
   const { text } = await withFallback("fast", (model) =>
     generateText({

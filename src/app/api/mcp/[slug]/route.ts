@@ -1,4 +1,5 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { clientIp } from "@/lib/rate-limit";
 import { agentFromUserAgent, createShopServer } from "@/lib/mcp/shop-server";
 import { getShop } from "@/lib/shop";
 
@@ -19,7 +20,10 @@ async function handle(request: Request, { params }: { params: Promise<{ slug: st
     );
   }
 
-  const server = createShopServer(seller, { detectedAgent: agentFromUserAgent(request.headers.get("user-agent")) });
+  const server = createShopServer(seller, {
+    detectedAgent: agentFromUserAgent(request.headers.get("user-agent")),
+    caller: `ip:${clientIp(request.headers)}`,
+  });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

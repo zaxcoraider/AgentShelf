@@ -8,6 +8,7 @@ import { db, schema } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { aiConfigured } from "@/lib/ai";
 import { draftListing, ListingError, publishInput, publishListing, type DraftedListing } from "@/lib/listings";
+import { takeAiCall } from "@/lib/rate-limit";
 import { requireSeller } from "@/lib/seller-session";
 
 export type DraftResult = { ok: true; draft: DraftedListing } | { ok: false; message: string };
@@ -28,6 +29,8 @@ const failure = (err: unknown, fallback: string) => {
 export async function draft(form: FormData): Promise<DraftResult> {
   const seller = await requireSeller();
   if (!aiConfigured("vision")) return { ok: false, message: "No vision model is configured (AI_MODEL_VISION)." };
+  const allowed = takeAiCall("listing", seller.id);
+  if (!allowed.ok) return { ok: false, message: allowed.message };
   try {
     return { ok: true, draft: await draftListing(seller, await photo(form)) };
   } catch (err) {

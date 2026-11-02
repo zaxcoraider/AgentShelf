@@ -1,6 +1,7 @@
 "use server";
 
 import { aiConfigured } from "@/lib/ai";
+import { takeAiCall } from "@/lib/rate-limit";
 import { requireSeller } from "@/lib/seller-session";
 import { askSeller } from "@/lib/shop";
 
@@ -12,6 +13,8 @@ export async function askAsShopper(_prev: AskState, form: FormData): Promise<Ask
   const question = String(form.get("question") ?? "").trim().slice(0, 300);
   if (question.length < 3) return { error: "Type a question first." };
   if (!aiConfigured("fast")) return { error: "No AI model is configured, so assistants get your raw facts instead." };
+  const allowed = takeAiCall("ask", seller.id);
+  if (!allowed.ok) return { error: allowed.message };
   try {
     const { answer } = await askSeller(seller, question);
     return { question, answer: answer ?? "No answer." };

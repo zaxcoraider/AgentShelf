@@ -43,7 +43,7 @@ async function run(fn: () => Promise<ToolResult>): Promise<ToolResult> {
 
 const NAME = "AgentShelf marketplace";
 
-export function createMarketplaceServer(opts: { detectedAgent?: string } = {}) {
+export function createMarketplaceServer(opts: { detectedAgent?: string; caller?: string } = {}) {
   const server = new McpServer(
     { name: "agentshelf-marketplace", version: "1.0.0" },
     {
@@ -186,7 +186,7 @@ export function createMarketplaceServer(opts: { detectedAgent?: string } = {}) {
         "Ask one shop a question about a product or the shop (materials, shipping, returns, custom orders). " +
         "Give product_id (its shop is found for you) or shop. Answers come only from that seller's own policy and listings.",
       inputSchema: {
-        question: z.string().min(3).describe("The shopper's question"),
+        question: z.string().min(3).max(1000).describe("The shopper's question"),
         product_id: z.string().optional().describe("The product the question is about"),
         shop: z.string().optional().describe("The shop, if the question isn't about one product"),
       },
@@ -198,7 +198,7 @@ export function createMarketplaceServer(opts: { detectedAgent?: string } = {}) {
         if (product_id && !found) return fail(`No product with id ${product_id}.`);
         const seller = found?.seller ?? (shop ? await findListedShop(shop) : undefined);
         if (!seller) return fail("Say which shop: pass product_id or shop (see list_shops).");
-        const { answer, facts } = await askSeller(seller, question, found?.product);
+        const { answer, facts } = await askSeller(seller, question, found?.product, { caller: opts.caller });
         return ok({ shop: seller.name, ...(answer ? { answer } : { note: "Answer from these facts from the seller.", facts }) });
       }),
   );

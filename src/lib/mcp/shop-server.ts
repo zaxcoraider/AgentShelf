@@ -55,7 +55,7 @@ export function agentFromUserAgent(userAgent: string | null): string | undefined
   return undefined;
 }
 
-export function createShopServer(seller: Seller, opts: { detectedAgent?: string } = {}) {
+export function createShopServer(seller: Seller, opts: { detectedAgent?: string; caller?: string } = {}) {
   const server = new McpServer(
     { name: `agentshelf-${seller.slug}`, version: "1.0.0" },
     {
@@ -180,7 +180,7 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
         "Ask a question about a product or the shop (materials, shipping times, returns, custom orders). " +
         "Answers come only from the seller's own policy and listings.",
       inputSchema: {
-        question: z.string().min(3).describe("The shopper's question"),
+        question: z.string().min(3).max(1000).describe("The shopper's question"),
         product_id: z.string().optional().describe("The product the question is about, if any"),
       },
       annotations: { readOnlyHint: true },
@@ -189,7 +189,7 @@ export function createShopServer(seller: Seller, opts: { detectedAgent?: string 
       run(async () => {
         const product = product_id ? await getProduct(seller, product_id) : undefined;
         if (product_id && !product) return fail(`No product with id ${product_id}.`);
-        const { answer, facts } = await askSeller(seller, question, product);
+        const { answer, facts } = await askSeller(seller, question, product, { caller: opts.caller });
         return ok(answer ? { answer } : { note: "Answer the question from these facts from the seller.", facts });
       }),
   );

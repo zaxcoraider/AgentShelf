@@ -2,6 +2,7 @@ import type { AgLlmRequest, AgLlmResponse } from "ag-studio";
 import { sessionSeller } from "@/lib/seller-session";
 import { failedResponse, toChatBody, translateStream, type Provider } from "@/lib/studio-agent/chat-completions";
 import { studioProviders, type StudioModelSlot } from "@/lib/studio-agent/models";
+import { takeAiCall } from "@/lib/rate-limit";
 
 /**
  * LLM proxy for the AG Studio dashboard's agents. The browser adapter posts one AgLlmRequest;
@@ -31,6 +32,10 @@ async function open(provider: Provider, request: AgLlmRequest, signal: AbortSign
 export async function POST(req: Request) {
   const seller = await sessionSeller();
   if (!seller) return Response.json({ error: "Sign in first." }, { status: 401 });
+  const allowed = takeAiCall("studio", seller.id);
+  if (!allowed.ok) {
+    return Response.json({ error: allowed.message }, { status: 429, headers: { "Retry-After": String(allowed.retryAfterSec) } });
+  }
 
   const raw = await req.text();
   if (raw.length > MAX_BODY_BYTES) return Response.json({ error: "Conversation too long. Start a new chat." }, { status: 413 });
