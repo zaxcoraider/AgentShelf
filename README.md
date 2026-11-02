@@ -175,6 +175,8 @@ PayPal is the payment layer for every sale, refund and dispute, and the seller a
 
 Everything runs against the PayPal **sandbox**; the app refuses to start against live. Tested end to end on the live site: an AI purchase from Claude, PayPal capture, the order in the Inbox, marked shipped, and PayPal's tracking email to the buyer.
 
+> **Who gets paid today?** In this demo, every shop's sales go to one PayPal sandbox business account: AgentShelf's. We tried PayPal Multiparty onboarding (Partner Referrals) so each shop connects its own account, but it needs approval as a PayPal partner (the sandbox answers `403 NOT_AUTHORIZED`). The next step is already enabled on our app: AgentShelf collects each sale, and the seller agent pays each shop through **PayPal Payouts** after it ships, minus a small fee, while refunds and disputes stay with the agent. See the [roadmap](#-roadmap).
+
 ## 📊 AG Studio
 
 The seller dashboard is an **AG Studio** report, used the way the prize brief asks: custom widgets, theming, layout, and **our own agent working with Studio's built-in agents**.
@@ -200,7 +202,7 @@ When a seller adds a product from a photo, the photo goes to **Channel3 image se
 
 ## ☁️ Render
 
-AgentShelf runs on **Render** from a Blueprint ([`render.yaml`](render.yaml)): a Node web service and a managed Postgres database. Every push to `main` deploys automatically. Before each deploy goes live, Render runs the database migrations, seeds the demo shop if missing, backfills demo data, and deletes expired visitor shops, so a deploy never needs a manual step.
+AgentShelf runs on **Render** from a Blueprint ([`render.yaml`](render.yaml)): a Node web service and a managed Postgres database. Every push to `main` deploys automatically. Before each deploy goes live, Render runs the database migrations, seeds the showcase shops if missing, backfills demo data, and deletes expired visitor shops, so a deploy never needs a manual step.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/zaxcoraider/AgentShelf)
 
@@ -225,6 +227,7 @@ The agent can't go rogue with money. The model never gets PayPal's raw `create_r
 - At most $100 of automatic refunds per day; past that, everything waits for the seller.
 - Never more than what's left on the order. Never on an order in dispute, unpaid, or already refunded.
 - The agent never turns a buyer down on its own. When the policy doesn't clearly cover a request, it escalates with a recommendation.
+- Two refunds at the same moment can't both pass: each decision runs one at a time per shop, and the amount is reserved on the order before PayPal is called. Tested on the sandbox with four refunds fired at once.
 - A buyer's assistant can request a refund only with the email the buyer paid with, and nothing is charged until the buyer approves the payment in PayPal.
 - Every action is logged with the agent's reason, including blocked and failed ones.
 
@@ -234,11 +237,11 @@ The agent can't go rogue with money. The model never gets PayPal's raw `create_r
 |---|---|
 | 🧭 **Judge's guide** | **[/judges](https://agentshelf-xsh7.onrender.com/judges)**: four short paths (buyer, AI assistant, seller, your own shop) and where every feature lives. |
 | 🛍 **As a buyer** | Open **[Maya's Candles](https://agentshelf-xsh7.onrender.com/shop/mayas-candles)** and buy with the PayPal **sandbox** buyer (login in the Devpost submission). |
-| 🤖 **Through Claude or ChatGPT** | Add `https://agentshelf-xsh7.onrender.com/api/mcp` as a custom connector, then ask: *"Find me a handmade gift under $40 on AgentShelf, ask the seller if they ship to Canada, then check out the best one."* |
-| 🧑‍💼 **As the seller** | **[Seller sign-in](https://agentshelf-xsh7.onrender.com/signin)** as Maya (password in the Devpost submission): Inbox, Dashboard → **Ask AI**, Products, Settings. |
+| 🤖 **Through Claude or ChatGPT** | Add `https://agentshelf-xsh7.onrender.com/api/mcp` as a custom connector, then ask: *"Find me a handmade gift under $40 on AgentShelf that ships to Canada, then check out the best one."* Four shops answer with their own rules: candles and ceramics ship only in the US, prints and jewelry ship to Canada. |
+| 🧑‍💼 **As the seller** | **[Seller sign-in](https://agentshelf-xsh7.onrender.com/signin)** as Maya (password in the Devpost submission): Inbox, Dashboard → **Ask AI**, Products, Settings. Approving a refund on seeded history shows exactly what would happen and changes nothing, so the next judge sees the same Inbox; your own sandbox purchase refunds for real. |
 | 🏪 **With your own shop** | **[Create your shop](https://agentshelf-xsh7.onrender.com/start)** in a minute and try editing everything. |
 
-Demo shops run in the PayPal sandbox: no real money moves. The demo shop is read-only on the live site, so every judge sees the same demo.
+Shops run in the PayPal sandbox: no real money moves. The marketplace has four permanent shops (Maya's Candles, Juniper Clay Studio, Fernwood Print Studio, Saltwater Silver), plus any shop you create. The showcase shops are read-only on the live site, so every judge sees the same demo.
 
 ## 🗺 Roadmap
 
@@ -258,6 +261,7 @@ Demo shops run in the PayPal sandbox: no real money moves. The demo shop is read
       • Photo → listing with Channel3 market prices<br>
       • Market watch: competitor price alerts via Channel3 webhooks<br>
       • Create your own shop, products and settings<br>
+      • A four-shop marketplace with different shipping rules<br>
       • Facts AI can't get wrong: MCP, JSON-LD, llms.txt<br>
       • Live on Render, deployed on every push
     </td>
@@ -342,7 +346,11 @@ scripts/                seed, migrations, smoke tests, demo photos (credited)
 - **Sandbox only.** The app refuses to start against live PayPal.
 - **Verified webhooks.** Every PayPal webhook signature is checked, and each event is processed once.
 - **Passwords are hashed** (scrypt); sign-in helpers can't be called from outside the server.
+- **Sessions can't be forged.** Cookies are signed with a server-only key (never the shared demo password) and name the shop's unique id, so an old cookie can't open a newer shop with the same name.
 - **Every seller action is scoped to its own shop**, and every agent action is logged with its reason.
+- **Fair-use limits** on every AI feature and on starting checkouts, per shop and per visitor, plus a daily ceiling for the whole site, so nobody can drain the AI credit or flood a shop with unpaid orders. Over the limit, `ask_seller` still returns the shop's facts.
+- **Uploads are checked**: a photo must really be a JPEG, PNG or WebP, not just named like one.
+- **Standard security headers** (HSTS, nosniff, no framing by other sites, camera and microphone off).
 - **Demo limits:** 3 new shops per visitor per day, 100 per day site-wide, 20 products per shop, and visitor shops are deleted after 30 days.
 
 ## 🙏 Credits

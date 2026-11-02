@@ -62,7 +62,7 @@ export default async function Judges() {
       time: "3 min",
       steps: [
         <><Link href="/signin" className="text-cream underline-offset-2 hover:underline">Sign in</Link> as Maya with the demo password from the Devpost submission.</>,
-        <><b>Inbox</b>: refunds the agent did on its own, ones over the limit waiting for approval, disputes, orders to ship.</>,
+        <><b>Inbox</b>: refunds the agent did on its own, ones over the limit waiting for approval, disputes, orders to ship. Approving on seeded history shows what would happen and changes nothing, so it&apos;s the same for every judge.</>,
         <><b>Dashboard</b> → <b>Ask AI</b> → “What needs me today?”: our PayPal agent working inside AG Studio.</>,
       ],
       cta: ["Seller sign-in", "/signin"],
