@@ -72,3 +72,4 @@ next-env.d.ts
 # Coding-agent skills installed locally (AG Grid ag-dev / ag-update)
 .claude/skills/
 skills-lock.json
+devpost.md

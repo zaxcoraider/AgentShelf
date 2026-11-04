@@ -5,6 +5,7 @@
 <h3 align="center">Shoppers now ask Claude or ChatGPT to buy things for them.<br>AgentShelf lets any small shop sell to those AI shoppers, get paid with PayPal,<br>and hand the after-sale work to its own agent.</h3>
 
 <p align="center">
+  <a href="https://youtu.be/eTzBD86nAHc"><img alt="Watch the 2-minute demo" src="https://img.shields.io/badge/▶_Watch_the_demo-2_min-FF0033?style=for-the-badge&labelColor=17130F"></a>
   <a href="https://agentshelf-xsh7.onrender.com"><img alt="Try it live" src="https://img.shields.io/badge/▶_Try_it_live-no_setup-F59E0B?style=for-the-badge&labelColor=17130F"></a>
   <a href="https://agentshelf-xsh7.onrender.com/judges"><img alt="Judge's guide" src="https://img.shields.io/badge/Judge's_guide-10_minutes-FAF7F2?style=for-the-badge&labelColor=17130F"></a>
   <a href="https://agentshelf-xsh7.onrender.com/start"><img alt="Create your own shop" src="https://img.shields.io/badge/🏪_Create_your_shop-1_minute-3DFFA0?style=for-the-badge&labelColor=17130F"></a>
@@ -21,6 +22,7 @@
 </p>
 
 <p align="center">
+  <a href="https://youtu.be/eTzBD86nAHc">Demo video</a> ·
   <a href="#-see-it-in-5-minutes">See it</a> ·
   <a href="#-the-problem">The problem</a> ·
   <a href="#%EF%B8%8F-how-it-works">How it works</a> ·
@@ -235,6 +237,7 @@ The agent can't go rogue with money. The model never gets PayPal's raw `create_r
 
 | | |
 |---|---|
+| 🎬 **Demo video** | **[Watch on YouTube](https://youtu.be/eTzBD86nAHc)** (2:21): Claude shops four stores and pays with PayPal, the seller agent refunds within limits, and AG Studio's agents build a page with ours. |
 | 🧭 **Judge's guide** | **[/judges](https://agentshelf-xsh7.onrender.com/judges)**: four short paths (buyer, AI assistant, seller, your own shop) and where every feature lives. |
 | 🛍 **As a buyer** | Open **[Maya's Candles](https://agentshelf-xsh7.onrender.com/shop/mayas-candles)** and buy with the PayPal **sandbox** buyer (login in the Devpost submission). |
 | 🤖 **Through Claude or ChatGPT** | Add `https://agentshelf-xsh7.onrender.com/api/mcp` as a custom connector, then ask: *"Find me a handmade gift under $40 on AgentShelf that ships to Canada, then check out the best one."* Four shops answer with their own rules: candles and ceramics ship only in the US, prints and jewelry ship to Canada. |
